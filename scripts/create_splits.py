@@ -8,6 +8,24 @@ import _path  # noqa: F401
 from earthbridge.data.manifest import load_manifest, write_manifest
 from earthbridge.data.splitting import SplitRatios, assert_no_group_leakage, grouped_split
 
+SPLIT_NAMES = ("train", "validation", "test")
+
+
+def rows_have_existing_splits(rows: list[dict[str, str]]) -> bool:
+    if not rows or "split" not in rows[0]:
+        return False
+    splits = [row.get("split", "").strip() for row in rows]
+    return all(split in set(SPLIT_NAMES) for split in splits)
+
+
+def existing_splits(rows: list[dict[str, str]]) -> dict[str, list[dict[str, str]]]:
+    splits: dict[str, list[dict[str, str]]] = {name: [] for name in SPLIT_NAMES}
+    for row in rows:
+        split = row.get("split", "").strip()
+        if split in splits:
+            splits[split].append(row)
+    return splits
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -30,7 +48,11 @@ def main() -> None:
     args = parse_args()
     rows = load_manifest(args.manifest)
     ratios = SplitRatios(args.train_ratio, args.validation_ratio, args.test_ratio)
-    splits = grouped_split(rows, ratios=ratios, seed=args.seed)
+    splits = existing_splits(rows) if rows_have_existing_splits(rows) else grouped_split(
+        rows,
+        ratios=ratios,
+        seed=args.seed,
+    )
     assert_no_group_leakage(splits)
 
     input_fields = list(rows[0].keys()) if rows else ["sample_id", "image_path", "modality"]

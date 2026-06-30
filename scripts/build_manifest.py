@@ -5,7 +5,13 @@ from pathlib import Path
 
 import _path  # noqa: F401
 
-from earthbridge.data.inspection import inspect_dataset
+from earthbridge.data.bigearthnet import (
+    BigEarthNetMetadataRecord,
+    has_bigearthnet_folders,
+    load_bigearthnet_metadata,
+    normalize_patch_key,
+)
+from earthbridge.data.inspection import ImageInspection, inspect_dataset, normalize_modality_name
 from earthbridge.data.manifest import write_manifest
 
 FIELDNAMES = [
@@ -17,23 +23,113 @@ FIELDNAMES = [
     "geographic_group",
     "labels",
     "channels",
+    "split",
 ]
 
 
 def normalize_modality(raw: str) -> str:
-    value = raw.lower().strip()
-    if value in {"optical", "rgb", "sentinel2_rgb", "s2_rgb"}:
-        return "optical_rgb"
-    if value in {"sar", "sentinel1", "s1"}:
-        return "sar"
-    if value in {"multispectral", "sentinel2", "s2"}:
-        return "multispectral"
-    return value or "unknown"
+    return normalize_modality_name(raw)
+
+
+def image_path_for_manifest(root: Path, image_path: str | Path) -> str:
+    return str(Path(image_path).relative_to(root.parent))
+
+
+def sample_id(prefix: str, value: str) -> str:
+    safe = "".join(
+        character if character.isalnum() or character in {"_", "-"} else "_"
+        for character in value
+    )
+    return f"{prefix}_{safe}"
+
+
+def inspections_by_modality_and_key(
+    inspections: list[ImageInspection],
+) -> dict[str, dict[str, list[ImageInspection]]]:
+    grouped: dict[str, dict[str, list[ImageInspection]]] = {}
+    for item in inspections:
+        if not item.readable:
+            continue
+        modality = normalize_modality(item.modality)
+        key = normalize_patch_key(Path(item.path).stem)
+        grouped.setdefault(modality, {}).setdefault(key, []).append(item)
+    return grouped
+
+
+def choose_image(
+    images: list[ImageInspection],
+    preferred_split: str = "",
+) -> ImageInspection:
+    if preferred_split:
+        for image in images:
+            if image.split == preferred_split:
+                return image
+    return images[0]
+
+
+def labels_text(record: BigEarthNetMetadataRecord) -> str:
+    return "|".join(record.labels)
+
+
+def build_bigearthnet_rows(
+    root: Path,
+    inspections: list[ImageInspection],
+    metadata: list[BigEarthNetMetadataRecord],
+) -> list[dict[str, str]]:
+    grouped = inspections_by_modality_and_key(inspections)
+    s1_images = grouped.get("sar", {})
+    s2_images = grouped.get("multispectral", {})
+    rows: list[dict[str, str]] = []
+
+    for record in metadata:
+        if record.patch_id not in s2_images or record.s1_name not in s1_images:
+            continue
+
+        s2 = choose_image(s2_images[record.patch_id], preferred_split=record.split)
+        split = record.split or s2.split
+        s1 = choose_image(s1_images[record.s1_name], preferred_split=split)
+        split = split or s1.split
+
+        pair_id = record.patch_id
+        labels = labels_text(record)
+        rows.extend(
+            [
+                {
+                    "sample_id": sample_id("S1", record.s1_name),
+                    "image_path": image_path_for_manifest(root, s1.path),
+                    "modality": "sar",
+                    "pair_id": pair_id,
+                    "scene_id": pair_id,
+                    "geographic_group": pair_id,
+                    "labels": labels,
+                    "channels": str(s1.channels or ""),
+                    "split": split,
+                },
+                {
+                    "sample_id": sample_id("S2", record.patch_id),
+                    "image_path": image_path_for_manifest(root, s2.path),
+                    "modality": "multispectral",
+                    "pair_id": pair_id,
+                    "scene_id": pair_id,
+                    "geographic_group": pair_id,
+                    "labels": labels,
+                    "channels": str(s2.channels or ""),
+                    "split": split,
+                },
+            ]
+        )
+
+    return rows
 
 
 def build_rows(input_root: str | Path) -> list[dict[str, str]]:
     root = Path(input_root)
     inspections = inspect_dataset(root)
+    metadata = load_bigearthnet_metadata(root)
+    if metadata:
+        return build_bigearthnet_rows(root, inspections, metadata)
+
+    bigearthnet_dataset = has_bigearthnet_folders(root)
     rows: list[dict[str, str]] = []
 
     counters: dict[str, int] = {}
@@ -46,17 +142,19 @@ def build_rows(input_root: str | Path) -> list[dict[str, str]]:
         stem = Path(item.path).stem
         sample_prefix = modality.upper().replace("_RGB", "").replace("_", "")
         sample_id = f"{sample_prefix}_{counters[modality]:06d}"
+        pair_id = "" if bigearthnet_dataset else stem
 
         rows.append(
             {
                 "sample_id": sample_id,
-                "image_path": str(Path(item.path).relative_to(root.parent)),
+                "image_path": image_path_for_manifest(root, item.path),
                 "modality": modality,
-                "pair_id": stem,
-                "scene_id": stem,
-                "geographic_group": "",
+                "pair_id": pair_id,
+                "scene_id": pair_id,
+                "geographic_group": pair_id,
                 "labels": "",
                 "channels": str(item.channels or ""),
+                "split": item.split,
             }
         )
 

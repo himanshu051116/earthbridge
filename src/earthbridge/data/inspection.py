@@ -17,12 +17,41 @@ SUPPORTED_IMAGE_EXTENSIONS = {
     ".bmp",
 }
 
+SPLIT_ALIASES = {
+    "train": "train",
+    "training": "train",
+    "validation": "validation",
+    "valid": "validation",
+    "val": "validation",
+    "test": "test",
+}
+
+MODALITY_ALIASES = {
+    "bigearthnet-s1": "sar",
+    "bigearthnet_s1": "sar",
+    "sentinel-1": "sar",
+    "sentinel1": "sar",
+    "s1": "sar",
+    "sar": "sar",
+    "bigearthnet-s2": "multispectral",
+    "bigearthnet_s2": "multispectral",
+    "sentinel-2": "multispectral",
+    "sentinel2": "multispectral",
+    "s2": "multispectral",
+    "multispectral": "multispectral",
+    "optical": "optical_rgb",
+    "rgb": "optical_rgb",
+    "sentinel2_rgb": "optical_rgb",
+    "s2_rgb": "optical_rgb",
+}
+
 
 @dataclass(frozen=True)
 class ImageInspection:
     path: str
     modality: str
     extension: str
+    split: str = ""
     width: int | None = None
     height: int | None = None
     channels: int | None = None
@@ -43,6 +72,32 @@ def iter_image_files(root: str | Path) -> list[Path]:
     )
 
 
+def normalize_folder_name(value: str) -> str:
+    return value.lower().strip().replace(" ", "_")
+
+
+def normalize_modality_name(value: str) -> str:
+    normalized = normalize_folder_name(value)
+    return MODALITY_ALIASES.get(normalized, normalized or "unknown")
+
+
+def infer_split(root: str | Path, image_path: str | Path) -> str:
+    root_path = Path(root)
+    path = Path(image_path)
+    try:
+        relative = path.relative_to(root_path)
+    except ValueError:
+        parts = path.parts
+    else:
+        parts = relative.parts
+
+    for part in parts:
+        split = SPLIT_ALIASES.get(normalize_folder_name(part))
+        if split:
+            return split
+    return ""
+
+
 def infer_modality(root: str | Path, image_path: str | Path) -> str:
     root_path = Path(root)
     path = Path(image_path)
@@ -50,15 +105,57 @@ def infer_modality(root: str | Path, image_path: str | Path) -> str:
         relative = path.relative_to(root_path)
     except ValueError:
         return path.parent.name
+    parts = relative.parts
 
-    return relative.parts[0] if len(relative.parts) > 1 else "unknown"
+    for part in parts:
+        normalized = normalize_folder_name(part)
+        if normalized in MODALITY_ALIASES:
+            return MODALITY_ALIASES[normalized]
+
+    for part in parts:
+        if normalize_folder_name(part) not in SPLIT_ALIASES:
+            return normalize_modality_name(part)
+
+    return "unknown"
 
 
-def inspect_image(root: str | Path, image_path: str | Path) -> ImageInspection:
-    path = Path(image_path)
-    modality = infer_modality(root, path)
-    extension = path.suffix.lower()
+def inspect_raster_image(path: Path, modality: str, split: str, extension: str) -> ImageInspection:
+    try:
+        import rasterio
+    except ImportError:
+        return ImageInspection(
+            path=str(path),
+            modality=modality,
+            extension=extension,
+            split=split,
+            readable=False,
+            error="rasterio is required to inspect raster image files",
+        )
 
+    try:
+        with rasterio.open(path) as dataset:
+            return ImageInspection(
+                path=str(path),
+                modality=modality,
+                extension=extension,
+                split=split,
+                width=dataset.width,
+                height=dataset.height,
+                channels=dataset.count,
+                mode="rasterio",
+            )
+    except Exception as exc:
+        return ImageInspection(
+            path=str(path),
+            modality=modality,
+            extension=extension,
+            split=split,
+            readable=False,
+            error=str(exc),
+        )
+
+
+def inspect_pillow_image(path: Path, modality: str, split: str, extension: str) -> ImageInspection:
     try:
         from PIL import Image
     except ImportError:
@@ -66,8 +163,9 @@ def inspect_image(root: str | Path, image_path: str | Path) -> ImageInspection:
             path=str(path),
             modality=modality,
             extension=extension,
-            readable=True,
-            error="Pillow not installed; dimensions not inspected",
+            split=split,
+            readable=False,
+            error="Pillow is required to inspect non-raster image files",
         )
 
     try:
@@ -77,6 +175,7 @@ def inspect_image(root: str | Path, image_path: str | Path) -> ImageInspection:
                 path=str(path),
                 modality=modality,
                 extension=extension,
+                split=split,
                 width=image.width,
                 height=image.height,
                 channels=channels,
@@ -87,9 +186,22 @@ def inspect_image(root: str | Path, image_path: str | Path) -> ImageInspection:
             path=str(path),
             modality=modality,
             extension=extension,
+            split=split,
             readable=False,
             error=str(exc),
         )
+
+
+def inspect_image(root: str | Path, image_path: str | Path) -> ImageInspection:
+    path = Path(image_path)
+    modality = infer_modality(root, path)
+    split = infer_split(root, path)
+    extension = path.suffix.lower()
+
+    if extension in {".tif", ".tiff", ".jp2"}:
+        return inspect_raster_image(path, modality, split, extension)
+
+    return inspect_pillow_image(path, modality, split, extension)
 
 
 def inspect_dataset(root: str | Path) -> list[ImageInspection]:
@@ -98,6 +210,7 @@ def inspect_dataset(root: str | Path) -> list[ImageInspection]:
 
 def summarize_inspections(inspections: list[ImageInspection]) -> dict[str, Any]:
     modality_counts = Counter(item.modality for item in inspections)
+    split_counts = Counter(item.split or "unknown" for item in inspections)
     extension_counts = Counter(item.extension for item in inspections)
     shape_counts = Counter(
         f"{item.width}x{item.height}x{item.channels}"
@@ -114,6 +227,7 @@ def summarize_inspections(inspections: list[ImageInspection]) -> dict[str, Any]:
     return {
         "total_images": len(inspections),
         "modalities": dict(sorted(modality_counts.items())),
+        "splits": dict(sorted(split_counts.items())),
         "extensions": dict(sorted(extension_counts.items())),
         "image_shapes": dict(sorted(shape_counts.items())),
         "unreadable_count": len(unreadable),
@@ -149,6 +263,7 @@ def write_dataset_report(output_dir: str | Path, inspections: list[ImageInspecti
                 "path",
                 "modality",
                 "extension",
+                "split",
                 "width",
                 "height",
                 "channels",
@@ -164,6 +279,7 @@ def write_dataset_report(output_dir: str | Path, inspections: list[ImageInspecti
                     "path": item.path,
                     "modality": item.modality,
                     "extension": item.extension,
+                    "split": item.split,
                     "width": item.width or "",
                     "height": item.height or "",
                     "channels": item.channels or "",

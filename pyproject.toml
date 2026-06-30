@@ -19,7 +19,7 @@ addopts = "--basetemp=.pytest_tmp"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-extend-exclude = ["notebooks/*.ipynb"]
+extend-exclude = ["*.ipynb", "notebooks/*.ipynb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
