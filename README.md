@@ -90,6 +90,17 @@ Then create the first canonical manifest:
 python scripts/build_manifest.py --input data/raw --output data/manifests/samples.csv
 ```
 
+Validate the manifest before training:
+
+```bash
+python scripts/check_manifest.py \
+  --manifest data/manifests/train.csv \
+  --root-dir . \
+  --left-modality multispectral \
+  --right-modality sar \
+  --min-pairs 1
+```
+
 Generate baseline descriptors from a manifest:
 
 ```bash

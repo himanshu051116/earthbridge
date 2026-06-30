@@ -8,6 +8,7 @@
 - Multi-label land-cover labels are carried into manifests when metadata is available.
 - Existing `train`, `validation`, and `test` folders are preserved.
 - Train, descriptor generation, FAISS indexing, evaluation, latency, artifact export, and artifact verification scripts are in place.
+- Manifest validation catches missing files, missing labels, duplicate sample IDs, and zero paired samples before training.
 - Kaggle and Colab notebooks are configured for cloud training and artifact export.
 - FastAPI serves descriptor retrieval, image upload retrieval, model info, health checks, and gallery previews.
 - The browser demo can upload query images and show ranked results with PNG previews.

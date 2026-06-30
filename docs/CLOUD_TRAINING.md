@@ -49,6 +49,16 @@ python scripts/verify_artifacts.py --artifact-root artifacts
 uvicorn earthbridge.api.main:app --reload
 ```
 
+If the notebook stops before training, inspect:
+
+```text
+artifacts/reports/manifest_samples_check.json
+artifacts/reports/manifest_train_check.json
+artifacts/reports/manifest_test_check.json
+```
+
+These reports catch missing images, missing labels, duplicate IDs, and zero paired samples.
+
 ## Kaggle Notes
 
 Prefer Kaggle when the dataset is large. Attach the dataset to the notebook and set:
