@@ -12,6 +12,7 @@ DEFAULT_REQUIRED_ARTIFACTS = [
     "descriptors/gallery_ids.json",
     "indexes/gallery.index",
     "indexes/gallery_ids.json",
+    "manifests/test.csv",
     "reports/evaluation_summary.json",
     "reports/direction_metrics.csv",
     "reports/latency_summary.json",
@@ -149,4 +150,3 @@ def export_artifact_bundle(
         "exported": exported,
         "verification": report,
     }
-

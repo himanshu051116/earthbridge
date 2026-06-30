@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +33,32 @@ def load_image_chw(path: str | Path) -> np.ndarray:
         return np.transpose(array, (2, 0, 1))
 
     raise ValueError(f"Unsupported image shape for {image_path}: {array.shape}")
+
+
+def _array_to_chw(array: np.ndarray) -> np.ndarray:
+    if array.ndim == 2:
+        return array[None, ...]
+    if array.ndim == 3:
+        return np.transpose(array, (2, 0, 1))
+    raise ValueError(f"Unsupported image shape: {array.shape}")
+
+
+def load_image_chw_from_bytes(filename: str, content: bytes) -> np.ndarray:
+    suffix = Path(filename).suffix.lower()
+    if suffix in {".tif", ".tiff", ".jp2"}:
+        try:
+            from rasterio.io import MemoryFile
+
+            with MemoryFile(content) as memory_file:
+                with memory_file.open() as dataset:
+                    return np.asarray(dataset.read())
+        except Exception:
+            pass
+
+    from PIL import Image
+
+    with Image.open(BytesIO(content)) as image:
+        return _array_to_chw(np.asarray(image))
 
 
 def normalize_image(array: np.ndarray) -> np.ndarray:
@@ -104,3 +131,15 @@ def load_image_tensor(
     tensor = ensure_channels(tensor, expected_channels)
     return resize_tensor(tensor, image_size)
 
+
+def load_image_tensor_from_bytes(
+    filename: str,
+    content: bytes,
+    image_size: int,
+    expected_channels: int,
+) -> torch.Tensor:
+    array = load_image_chw_from_bytes(filename, content)
+    normalized = normalize_image(array)
+    tensor = torch.from_numpy(normalized.astype(np.float32))
+    tensor = ensure_channels(tensor, expected_channels)
+    return resize_tensor(tensor, image_size)

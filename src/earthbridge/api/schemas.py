@@ -13,6 +13,8 @@ class ModelInfoResponse(BaseModel):
     embedding_dim: int | None
     index_size: int
     index_type: str
+    model_loaded: bool = False
+    gallery_metadata_loaded: bool = False
 
 
 class DescriptorRetrieveRequest(BaseModel):
@@ -25,10 +27,13 @@ class RetrievalResult(BaseModel):
     rank: int
     gallery_id: str
     similarity: float
+    modality: str = ""
+    labels: str = ""
+    image_path: str = ""
+    thumbnail: str = ""
 
 
 class RetrievalResponse(BaseModel):
     retrieval_type: str
     retrieval_time_ms: float
     results: list[RetrievalResult]
-

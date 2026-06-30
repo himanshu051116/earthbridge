@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EarthBridge</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #172026;
+        background: #f4f7f5;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      header {
+        background: #12312b;
+        color: #f8fbf8;
+        padding: 22px clamp(18px, 4vw, 48px);
+      }
+
+      h1 {
+        font-size: 28px;
+        line-height: 1.1;
+        margin: 0 0 6px;
+        letter-spacing: 0;
+      }
+
+      header p {
+        margin: 0;
+        color: #c9ddd5;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: minmax(280px, 360px) 1fr;
+        gap: 22px;
+        padding: 22px clamp(18px, 4vw, 48px);
+      }
+
+      section {
+        background: #ffffff;
+        border: 1px solid #d8e0dc;
+        border-radius: 8px;
+        padding: 18px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        margin: 0 0 14px;
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      input,
+      select,
+      button {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid #c7d2cc;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font: inherit;
+      }
+
+      button {
+        background: #176b58;
+        color: white;
+        border-color: #176b58;
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        padding: 9px 8px;
+        border-bottom: 1px solid #e4ebe7;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: #41534b;
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .status {
+        min-height: 24px;
+        color: #41534b;
+        font-size: 14px;
+      }
+
+      .error {
+        color: #9b1c1c;
+      }
+
+      .score {
+        font-variant-numeric: tabular-nums;
+      }
+
+      @media (max-width: 780px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>EarthBridge</h1>
+      <p>Same-modal and cross-modal satellite image retrieval</p>
+    </header>
+    <main>
+      <section>
+        <form id="retrieve-form">
+          <label>
+            Query Image
+            <input id="image" name="image" type="file" required />
+          </label>
+          <label>
+            Query Modality
+            <select id="query_modality" name="query_modality">
+              <option value="multispectral">Sentinel-2 multispectral</option>
+              <option value="sar">Sentinel-1 SAR</option>
+              <option value="optical_rgb">Optical RGB</option>
+            </select>
+          </label>
+          <label>
+            Target Modality
+            <select id="target_modality" name="target_modality">
+              <option value="sar">Sentinel-1 SAR</option>
+              <option value="multispectral">Sentinel-2 multispectral</option>
+              <option value="optical_rgb">Optical RGB</option>
+            </select>
+          </label>
+          <label>
+            Top K
+            <select id="top_k" name="top_k">
+              <option value="5">Top 5</option>
+              <option value="10" selected>Top 10</option>
+            </select>
+          </label>
+          <button id="submit" type="submit">Retrieve</button>
+        </form>
+        <p id="status" class="status"></p>
+      </section>
+      <section>
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Gallery ID</th>
+              <th>Modality</th>
+              <th>Similarity</th>
+              <th>Labels</th>
+            </tr>
+          </thead>
+          <tbody id="results"></tbody>
+        </table>
+      </section>
+    </main>
+    <script>
+      const form = document.querySelector("#retrieve-form");
+      const statusEl = document.querySelector("#status");
+      const resultsEl = document.querySelector("#results");
+      const submit = document.querySelector("#submit");
+
+      function setStatus(message, isError = false) {
+        statusEl.textContent = message;
+        statusEl.className = isError ? "status error" : "status";
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        submit.disabled = true;
+        resultsEl.innerHTML = "";
+        setStatus("Searching...");
+
+        try {
+          const payload = new FormData(form);
+          const response = await fetch("/retrieve", { method: "POST", body: payload });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.detail || "Retrieval failed");
+          }
+
+          setStatus(`${data.retrieval_type} retrieval in ${data.retrieval_time_ms.toFixed(2)} ms`);
+          for (const result of data.results) {
+            const row = document.createElement("tr");
+            const link = result.thumbnail
+              ? `<a href="${result.thumbnail}" target="_blank" rel="noreferrer">${result.gallery_id}</a>`
+              : result.gallery_id;
+            row.innerHTML = `
+              <td>${result.rank}</td>
+              <td>${link}</td>
+              <td>${result.modality || ""}</td>
+              <td class="score">${result.similarity.toFixed(4)}</td>
+              <td>${result.labels || ""}</td>
+            `;
+            resultsEl.appendChild(row);
+          }
+        } catch (error) {
+          setStatus(error.message, true);
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

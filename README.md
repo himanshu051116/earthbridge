@@ -160,6 +160,21 @@ Open:
 http://127.0.0.1:8000/docs
 ```
 
+After importing trained artifacts, the local demo reads by default:
+
+```text
+artifacts/checkpoints/baseline_pair.pt
+artifacts/indexes/gallery.index
+artifacts/indexes/gallery_ids.json
+artifacts/manifests/test.csv
+```
+
+Open the upload UI at:
+
+```text
+http://127.0.0.1:8000/
+```
+
 ## Cloud Training
 
 Use cloud notebooks for heavy training, then bring only verified artifacts back to this laptop:

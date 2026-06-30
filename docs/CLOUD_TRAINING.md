@@ -31,6 +31,7 @@ artifacts/descriptors/gallery.npy
 artifacts/descriptors/gallery_ids.json
 artifacts/indexes/gallery.index
 artifacts/indexes/gallery_ids.json
+artifacts/manifests/test.csv
 artifacts/reports/evaluation_summary.json
 artifacts/reports/direction_metrics.csv
 artifacts/reports/latency_summary.json
@@ -75,4 +76,3 @@ checkpoint + descriptors + FAISS index + reports
 ```
 
 That makes the final demo independent of internet, GPU availability, and cloud runtime limits.
-
