@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 from earthbridge.data.dataset import DEFAULT_CHANNELS, infer_modality_channels
-from earthbridge.data.image_io import load_image_tensor_from_bytes
+from earthbridge.data.image_io import load_image_tensor_from_bytes, load_preview_png
 from earthbridge.data.manifest import load_manifest
 from earthbridge.models import BaselineRetriever, EarthBridgeDualHead
 from earthbridge.retrieval.faiss_index import ExactFaissIndex
@@ -253,6 +253,12 @@ class RetrievalService:
             return None
         path = self.gallery_root / record["image_path"]
         return path if path.exists() else None
+
+    def gallery_preview(self, sample_id: str) -> bytes | None:
+        path = self.gallery_path(sample_id)
+        if path is None:
+            return None
+        return load_preview_png(path)
 
 
 def load_gallery_records(manifest_path: str | Path | None) -> dict[str, dict[str, str]]:

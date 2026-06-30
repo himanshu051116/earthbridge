@@ -61,6 +61,33 @@ def load_image_chw_from_bytes(filename: str, content: bytes) -> np.ndarray:
         return _array_to_chw(np.asarray(image))
 
 
+def image_chw_to_preview_rgb(array: np.ndarray) -> np.ndarray:
+    normalized = normalize_image(array)
+    if normalized.ndim != 3:
+        raise ValueError(f"Expected CHW image array, got shape {normalized.shape}")
+
+    channels = normalized.shape[0]
+    if channels == 1:
+        rgb = np.repeat(normalized, repeats=3, axis=0)
+    elif channels == 2:
+        mean_channel = normalized.mean(axis=0, keepdims=True)
+        rgb = np.concatenate([normalized[:2], mean_channel], axis=0)
+    else:
+        rgb = normalized[:3]
+
+    rgb = np.transpose(rgb, (1, 2, 0))
+    return (np.clip(rgb, 0.0, 1.0) * 255).astype(np.uint8)
+
+
+def load_preview_png(path: str | Path) -> bytes:
+    from PIL import Image
+
+    preview = image_chw_to_preview_rgb(load_image_chw(path))
+    output = BytesIO()
+    Image.fromarray(preview, mode="RGB").save(output, format="PNG")
+    return output.getvalue()
+
+
 def normalize_image(array: np.ndarray) -> np.ndarray:
     image = np.asarray(array, dtype=np.float32)
 

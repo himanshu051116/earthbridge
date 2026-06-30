@@ -92,3 +92,4 @@ def test_retrieval_service_retrieves_from_uploaded_image(tmp_path):
     assert response["results"][0]["gallery_id"] == "S1_A"
     assert response["results"][0]["modality"] == "sar"
     assert service.gallery_path("S1_A") == gallery_path
+    assert service.gallery_preview("S1_A").startswith(b"\x89PNG")

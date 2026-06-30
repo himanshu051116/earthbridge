@@ -6,6 +6,7 @@ from earthbridge.data.image_io import (
     ensure_channels,
     load_image_tensor,
     load_image_tensor_from_bytes,
+    load_preview_png,
 )
 
 
@@ -43,3 +44,12 @@ def test_load_image_tensor_from_bytes(tmp_path):
 
     assert tensor.shape == (3, 16, 16)
     assert tensor.dtype == torch.float32
+
+
+def test_load_preview_png_returns_browser_safe_png(tmp_path):
+    image_path = tmp_path / "gray.png"
+    Image.fromarray(np.full((12, 10), 128, dtype=np.uint8)).save(image_path)
+
+    preview = load_preview_png(image_path)
+
+    assert preview.startswith(b"\x89PNG")

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from earthbridge.api.schemas import (
@@ -79,8 +79,8 @@ async def retrieve_image(
 
 
 @app.get("/gallery/{sample_id}", include_in_schema=False)
-def gallery_file(sample_id: str) -> FileResponse:
-    path = service.gallery_path(sample_id)
-    if path is None:
+def gallery_file(sample_id: str) -> Response:
+    preview = service.gallery_preview(sample_id)
+    if preview is None:
         raise HTTPException(status_code=404, detail="Gallery sample not found")
-    return FileResponse(path)
+    return Response(content=preview, media_type="image/png")

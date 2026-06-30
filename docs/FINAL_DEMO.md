@@ -2,6 +2,23 @@
 
 This is the hackathon-safe demo path.
 
+## 0. Local Smoke Check
+
+Before waiting on Kaggle training, prove the API and UI path locally:
+
+```powershell
+python scripts/create_demo_index.py --output-dir artifacts/demo
+$env:EARTHBRIDGE_CHECKPOINT_PATH='artifacts/demo/checkpoints/baseline_pair.pt'
+$env:EARTHBRIDGE_INDEX_PATH='artifacts/demo/indexes/gallery.index'
+$env:EARTHBRIDGE_IDS_PATH='artifacts/demo/indexes/gallery_ids.json'
+$env:EARTHBRIDGE_GALLERY_MANIFEST='artifacts/demo/manifests/test.csv'
+$env:EARTHBRIDGE_GALLERY_ROOT='artifacts/demo'
+uvicorn earthbridge.api.main:app --reload
+```
+
+Open `http://127.0.0.1:8000/` and upload one of the files under `artifacts/demo/images/`.
+These are synthetic smoke artifacts, not final metrics.
+
 ## 1. Train Online
 
 Run:
@@ -67,4 +84,3 @@ http://127.0.0.1:8000/docs
 - Show `artifacts/reports/direction_metrics.csv`.
 - Show `artifacts/reports/latency_summary.json`.
 - Keep the demo local. Do not rely on Kaggle during judging.
-

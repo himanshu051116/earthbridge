@@ -116,6 +116,15 @@
         font-variant-numeric: tabular-nums;
       }
 
+      .thumb {
+        width: 64px;
+        height: 64px;
+        object-fit: cover;
+        border: 1px solid #d8e0dc;
+        border-radius: 6px;
+        background: #eef3f0;
+      }
+
       @media (max-width: 780px) {
         main {
           grid-template-columns: 1fr;
@@ -166,6 +175,7 @@
         <table>
           <thead>
             <tr>
+              <th>Preview</th>
               <th>Rank</th>
               <th>Gallery ID</th>
               <th>Modality</th>
@@ -208,7 +218,11 @@
             const link = result.thumbnail
               ? `<a href="${result.thumbnail}" target="_blank" rel="noreferrer">${result.gallery_id}</a>`
               : result.gallery_id;
+            const preview = result.thumbnail
+              ? `<img class="thumb" src="${result.thumbnail}" alt="">`
+              : "";
             row.innerHTML = `
+              <td>${preview}</td>
               <td>${result.rank}</td>
               <td>${link}</td>
               <td>${result.modality || ""}</td>

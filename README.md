@@ -17,7 +17,7 @@ The project is built evaluator-first because the scoring depends on:
 3. Train a simple paired contrastive retrieval baseline.
 4. Precompute gallery descriptors and search with FAISS or the NumPy fallback.
 5. Add dual heads, semantic positives, and hard negatives only after the baseline works.
-6. Add FastAPI and a React demo after `/retrieve` is correct.
+6. Add FastAPI and a browser demo after `/retrieve` is correct.
 
 ## First MVP
 
@@ -142,10 +142,20 @@ python scripts/benchmark_latency.py \
 
 ## Demo Index And API Smoke Test
 
-Create a tiny synthetic FAISS index:
+Create a self-contained synthetic smoke-demo bundle:
 
 ```bash
 python scripts/create_demo_index.py --output-dir artifacts/demo
+```
+
+Point the API at those smoke-demo artifacts in PowerShell:
+
+```powershell
+$env:EARTHBRIDGE_CHECKPOINT_PATH='artifacts/demo/checkpoints/baseline_pair.pt'
+$env:EARTHBRIDGE_INDEX_PATH='artifacts/demo/indexes/gallery.index'
+$env:EARTHBRIDGE_IDS_PATH='artifacts/demo/indexes/gallery_ids.json'
+$env:EARTHBRIDGE_GALLERY_MANIFEST='artifacts/demo/manifests/test.csv'
+$env:EARTHBRIDGE_GALLERY_ROOT='artifacts/demo'
 ```
 
 Start the API:
@@ -157,8 +167,10 @@ uvicorn earthbridge.api.main:app --reload
 Open:
 
 ```text
-http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/
 ```
+
+The smoke bundle is only for proving the local API, upload UI, checkpoint loading, TIFF previews, and FAISS retrieval path. Use trained Kaggle or Colab artifacts for final metrics.
 
 After importing trained artifacts, the local demo reads by default:
 
