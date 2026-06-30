@@ -1,0 +1,11 @@
+raw_dir: data/raw
+manifest: data/manifests/samples.csv
+splits_dir: data/manifests
+modalities:
+  optical_rgb:
+    aliases: [optical, rgb, sentinel2_rgb]
+  sar:
+    aliases: [sar, sentinel1, s1]
+  multispectral:
+    aliases: [multispectral, sentinel2, s2]
+

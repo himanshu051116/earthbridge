@@ -1,0 +1,12 @@
+torch
+torchvision
+faiss-cpu
+rasterio
+albumentations
+opencv-python
+matplotlib
+tensorboard
+fastapi
+uvicorn[standard]
+python-multipart
+

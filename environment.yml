@@ -1,0 +1,16 @@
+name: earthbridge
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - numpy
+      - pandas
+      - scikit-learn
+      - pillow
+      - pyyaml
+      - tqdm
+      - pytest
+      - ruff
+

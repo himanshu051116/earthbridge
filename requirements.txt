@@ -1,0 +1,18 @@
+numpy
+pandas
+scikit-learn
+pillow
+pyyaml
+tqdm
+pytest
+ruff
+
+# Install separately when the target machine is known:
+# torch
+# torchvision
+# faiss-cpu
+# rasterio
+# albumentations
+# fastapi
+# uvicorn[standard]
+

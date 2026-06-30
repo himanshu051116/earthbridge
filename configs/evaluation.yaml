@@ -1,0 +1,14 @@
+relevance_mode: semantic
+semantic_threshold: 0.5
+k_values: [5, 10]
+directions:
+  - [optical_rgb, optical_rgb]
+  - [sar, sar]
+  - [multispectral, multispectral]
+  - [optical_rgb, sar]
+  - [sar, optical_rgb]
+  - [optical_rgb, multispectral]
+  - [multispectral, optical_rgb]
+  - [sar, multispectral]
+  - [multispectral, sar]
+
