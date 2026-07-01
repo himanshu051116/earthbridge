@@ -2,6 +2,12 @@ __pycache__/
 .pytest_cache/
 .pytest_tmp*/
 .ruff_cache/
+.tmp/
+.submission_verify/
+earthbridge_final_submission/
+earthbridge_final_submission.zip
+submission_build/
+output/
 .venv/
 venv/
 env/

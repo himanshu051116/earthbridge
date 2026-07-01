@@ -15,14 +15,25 @@
 - The browser demo can upload query images and show ranked results with PNG previews.
 - `scripts/create_demo_index.py` creates a local synthetic smoke-demo bundle for API/UI testing.
 
-## Remaining Before Final Submission
+## Verified Final Submission Artifacts
 
-- Run `notebooks/kaggle_train_baseline.ipynb` on the attached BEN-14K Kaggle dataset.
-- Download `artifacts/earthbridge_export.zip` from Kaggle.
-- Extract the zip into the local project root.
-- Run `python scripts/verify_artifacts.py --artifact-root artifacts`.
-- Run the API using the real trained artifacts, not the synthetic smoke bundle.
-- Capture final `direction_metrics.csv`, `evaluation_summary.json`, and `latency_summary.json` for presentation.
+- `earthbridge_final_submission.zip` was inspected and extracted into an isolated verification folder.
+- `scripts/verify_artifacts.py --artifact-root artifacts` passed on the extracted artifact tree.
+- The checkpoint loads and contains `model_state_dict`.
+- The descriptor matrix has shape `6496 x 128`, all finite values, and matches the FAISS index count.
+- The FAISS index is trained, dimension `128`, and contains `6496` gallery vectors.
+- Descriptor IDs and FAISS index IDs match exactly.
+- The test manifest contains `6496` images, `3248` paired samples, both `sar` and `multispectral` modalities, and labels for every row.
+
+Final metrics from `artifacts/reports/final_submission_metrics.json`:
+
+- Cross-modal F1@5: 19.53%
+- Cross-modal F1@10: 11.59%
+- Full-validation Recall@1: 53.03%
+- Full-validation Recall@10: 70.08%
+- Mean retrieval latency: about 0.146 ms
+
+Remaining manual action: upload the clean final submission ZIP to the hackathon portal.
 
 ## Main Risks
 

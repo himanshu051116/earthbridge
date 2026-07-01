@@ -267,3 +267,7 @@ python scripts/verify_artifacts.py --artifact-root artifacts
 ```
 
 See [docs/CLOUD_TRAINING.md](docs/CLOUD_TRAINING.md) for the full cloud-to-local workflow.
+
+## Final Hackathon Submission
+
+The final offline submission package must include the source tree plus the verified trained artifacts. See [SUBMISSION_README.md](SUBMISSION_README.md) for the artifact checklist, architecture summary, run instructions, demo flow, and final metrics used for judging.
