@@ -32,9 +32,11 @@ def args(**overrides):
         "weight_decay": 1e-4,
         "temperature": 0.07,
         "device": "cuda",
-        "semantic_loss_weight": 0.1,
-        "hard_negative_loss_weight": 0.2,
+        "learnable_temperature": False,
+        "semantic_loss_weight": 0.0,
+        "hard_negative_loss_weight": 0.0,
         "hard_negative_margin": 0.2,
+        "diagnostic_sample_count": 128,
         "seed": 42,
         "top_k": 10,
         "latency_queries": 100,
@@ -81,9 +83,10 @@ def test_build_steps_runs_full_cloud_pipeline_with_label_checks():
     )
     assert any("--projection-dropout 0.0" in command for command in commands)
     assert any("--batch-size 128" in command for command in commands)
-    assert any("--semantic-loss-weight 0.1" in command for command in commands)
-    assert any("--hard-negative-loss-weight 0.2" in command for command in commands)
+    assert any("--semantic-loss-weight 0.0" in command for command in commands)
+    assert any("--hard-negative-loss-weight 0.0" in command for command in commands)
     assert any("--hard-negative-margin 0.2" in command for command in commands)
+    assert any("--diagnostic-sample-count 128" in command for command in commands)
     assert any("--seed 42" in command for command in commands)
 
 

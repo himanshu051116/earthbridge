@@ -37,9 +37,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--temperature", type=float, default=0.07)
     parser.add_argument("--projection-dropout", type=float, default=0.0)
-    parser.add_argument("--semantic-loss-weight", type=float, default=0.1)
-    parser.add_argument("--hard-negative-loss-weight", type=float, default=0.2)
+    parser.add_argument("--learnable-temperature", action="store_true")
+    parser.add_argument("--semantic-loss-weight", type=float, default=0.0)
+    parser.add_argument("--hard-negative-loss-weight", type=float, default=0.0)
     parser.add_argument("--hard-negative-margin", type=float, default=0.2)
+    parser.add_argument("--diagnostic-sample-count", type=int, default=128)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--top-k", type=int, default=10)
@@ -201,12 +203,19 @@ def build_steps(args: argparse.Namespace) -> list[PipelineStep]:
                     str(args.weight_decay),
                     "--temperature",
                     str(args.temperature),
+                    *(
+                        ["--learnable-temperature"]
+                        if args.learnable_temperature
+                        else []
+                    ),
                     "--semantic-loss-weight",
                     str(args.semantic_loss_weight),
                     "--hard-negative-loss-weight",
                     str(args.hard_negative_loss_weight),
                     "--hard-negative-margin",
                     str(args.hard_negative_margin),
+                    "--diagnostic-sample-count",
+                    str(args.diagnostic_sample_count),
                     "--seed",
                     str(args.seed),
                     "--device",

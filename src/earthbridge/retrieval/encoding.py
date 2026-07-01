@@ -21,6 +21,7 @@ def build_model(
     embedding_dim: int,
     backbone: str,
     projection_dropout: float = 0.1,
+    shared_backbone: bool = False,
 ) -> torch.nn.Module:
     if model_type == "baseline":
         return BaselineRetriever(
@@ -28,6 +29,7 @@ def build_model(
             backbone_name=backbone,
             embedding_dim=embedding_dim,
             projection_dropout=projection_dropout,
+            shared_backbone=shared_backbone,
         )
     if model_type == "dual_head":
         return EarthBridgeDualHead(
@@ -64,6 +66,7 @@ def encode_manifest(
     modality_filter: str | None = None,
     device: str = "cpu",
     projection_dropout: float = 0.1,
+    shared_backbone: bool = False,
 ) -> tuple[list[str], np.ndarray]:
     rows = load_manifest(manifest_path)
     if modality_filter:
@@ -86,6 +89,7 @@ def encode_manifest(
         embedding_dim,
         backbone,
         projection_dropout=projection_dropout,
+        shared_backbone=shared_backbone,
     )
     load_checkpoint_if_available(model, checkpoint)
     model.to(device)

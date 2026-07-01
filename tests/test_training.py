@@ -99,6 +99,16 @@ def test_train_paired_baseline_writes_checkpoint(tmp_path):
     assert "model_state_dict" in payload
     assert payload["metadata"]["pair_count"] == 2
     assert payload["metadata"]["best_validation"]["mean_recall_at_10"] >= 0.0
+    diagnostics = result["history"][0]["diagnostics"]
+    assert "positive_pair_cosine_mean" in diagnostics
+    assert "negative_pair_cosine_mean" in diagnostics
+    assert "left_embedding_std_mean" in diagnostics
+    assert "right_embedding_std_mean" in diagnostics
+    assert "gradient_norm" in diagnostics
+    assert "effective_temperature" in diagnostics
+    assert "logit_scale" in diagnostics
+    assert diagnostics["augmentations_enabled"] is False
+    assert result["pair_alignment"]["same_order"] is True
 
 
 def test_assert_aligned_pair_ids_rejects_missing_or_misaligned_batch():
@@ -167,10 +177,11 @@ def test_tiny_cross_modal_training_overfits_exact_pairs(tmp_path):
             epochs=100,
             learning_rate=0.001,
             weight_decay=0.0,
-            temperature=0.02,
+            temperature=0.07,
             semantic_loss_weight=0.0,
-            hard_negative_loss_weight=1.0,
-            hard_negative_margin=0.3,
+            hard_negative_loss_weight=0.0,
+            require_validation_pair_alignment=True,
+            diagnostic_sample_count=128,
             seed=42,
             output_checkpoint=str(checkpoint),
         )

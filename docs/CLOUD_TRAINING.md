@@ -17,7 +17,27 @@ notebooks/kaggle_train_baseline.ipynb
 notebooks/colab_train_baseline.ipynb
 ```
 
-Both notebooks call the same reproducible pipeline script. On Kaggle, the direct command is:
+Both notebooks first run the real-data exact-overfit gate:
+
+```bash
+python scripts/run_tiny_overfit_matrix.py \
+  --manifest data/manifests/train.csv \
+  --root-dir /kaggle/input/datasets/narendraaironi/bigearthnet-14k \
+  --left-modality multispectral \
+  --right-modality sar \
+  --pair-count 128 \
+  --batch-size 128 \
+  --epochs 100 \
+  --device cuda
+```
+
+Do not start full training unless this writes:
+
+```text
+artifacts/tiny_overfit/best_tiny_overfit_config.json
+```
+
+After that gate passes, the direct full-pipeline command is:
 
 ```bash
 python scripts/run_cloud_pipeline.py \
@@ -26,9 +46,9 @@ python scripts/run_cloud_pipeline.py \
   --right-modality sar \
   --batch-size 128 \
   --projection-dropout 0 \
-  --semantic-loss-weight 0.1 \
-  --hard-negative-loss-weight 0.2 \
-  --hard-negative-margin 0.2 \
+  --semantic-loss-weight 0 \
+  --hard-negative-loss-weight 0 \
+  --diagnostic-sample-count 128 \
   --seed 42 \
   --device cuda \
   --export-zip artifacts/earthbridge_export.zip

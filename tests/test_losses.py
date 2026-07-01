@@ -19,6 +19,14 @@ def test_bidirectional_pair_loss_is_lower_for_aligned_pairs():
     assert aligned_loss < misaligned_loss
 
 
+def test_bidirectional_pair_loss_accepts_tensor_temperature():
+    temperature = torch.tensor(0.07, requires_grad=True)
+    loss = bidirectional_pair_loss(torch.eye(4), torch.eye(4), temperature=temperature)
+    loss.backward()
+
+    assert temperature.grad is not None
+
+
 def test_hard_negative_margin_loss_is_lower_for_separated_pairs():
     left = torch.eye(4)
     right_aligned = torch.eye(4)

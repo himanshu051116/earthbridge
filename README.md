@@ -120,7 +120,27 @@ python scripts/build_indexes.py \
   --output-index artifacts/indexes/gallery.index
 ```
 
-Train the first paired baseline after splits are available:
+Before full training, run the 128-pair exact-overfit gate on real paired data:
+
+```bash
+python scripts/run_tiny_overfit_matrix.py \
+  --manifest data/manifests/train.csv \
+  --root-dir . \
+  --left-modality multispectral \
+  --right-modality sar \
+  --pair-count 128 \
+  --batch-size 128 \
+  --epochs 100 \
+  --device cuda
+```
+
+Full training should start only after this writes:
+
+```text
+artifacts/tiny_overfit/best_tiny_overfit_config.json
+```
+
+Train the first paired baseline after the overfit gate passes:
 
 ```bash
 python scripts/train_baseline.py \
@@ -132,9 +152,9 @@ python scripts/train_baseline.py \
   --batch-size 128 \
   --epochs 5 \
   --projection-dropout 0 \
-  --semantic-loss-weight 0.1 \
-  --hard-negative-loss-weight 0.2 \
-  --hard-negative-margin 0.2 \
+  --semantic-loss-weight 0 \
+  --hard-negative-loss-weight 0 \
+  --diagnostic-sample-count 128 \
   --seed 42 \
   --output-checkpoint artifacts/checkpoints/baseline_pair.pt
 ```
@@ -214,7 +234,7 @@ notebooks/kaggle_train_baseline.ipynb
 notebooks/colab_train_baseline.ipynb
 ```
 
-The notebooks call the same one-command pipeline:
+The Kaggle notebook first runs `scripts/run_tiny_overfit_matrix.py`. The full pipeline should run only after the 128-pair exact-pair gate passes:
 
 ```bash
 python scripts/run_cloud_pipeline.py \
@@ -223,9 +243,9 @@ python scripts/run_cloud_pipeline.py \
   --right-modality sar \
   --batch-size 128 \
   --projection-dropout 0 \
-  --semantic-loss-weight 0.1 \
-  --hard-negative-loss-weight 0.2 \
-  --hard-negative-margin 0.2 \
+  --semantic-loss-weight 0 \
+  --hard-negative-loss-weight 0 \
+  --diagnostic-sample-count 128 \
   --seed 42 \
   --device cuda
 ```

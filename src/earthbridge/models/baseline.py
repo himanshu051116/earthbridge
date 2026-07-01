@@ -29,7 +29,8 @@ class SensorEncoder(nn.Module):
             pretrained=pretrained_backbone,
             input_channels=adapter_channels,
         )
-        sketch_pixels = 4 * 4
+        self.sketch_size = 8
+        sketch_pixels = self.sketch_size * self.sketch_size
         self.feature_dim = (
             backbone_dim
             + adapter_channels * 2
@@ -41,12 +42,18 @@ class SensorEncoder(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         raw_means = x.mean(dim=(2, 3))
         raw_stds = x.std(dim=(2, 3), unbiased=False)
-        raw_sketch = F.adaptive_avg_pool2d(x, output_size=(4, 4)).flatten(1)
+        raw_sketch = F.adaptive_avg_pool2d(
+            x,
+            output_size=(self.sketch_size, self.sketch_size),
+        ).flatten(1)
         adapted = self.adapter(x)
         features = self.backbone(adapted)
         adapted_means = adapted.mean(dim=(2, 3))
         adapted_stds = adapted.std(dim=(2, 3), unbiased=False)
-        adapted_sketch = F.adaptive_avg_pool2d(adapted, output_size=(4, 4)).flatten(1)
+        adapted_sketch = F.adaptive_avg_pool2d(
+            adapted,
+            output_size=(self.sketch_size, self.sketch_size),
+        ).flatten(1)
         return torch.cat(
             [
                 features,

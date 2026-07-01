@@ -44,6 +44,14 @@ def test_projection_dropout_is_configurable():
     assert {dropout.p for dropout in dropouts} == {0.0}
 
 
+def test_baseline_retriever_uses_separate_encoders_by_default():
+    model = BaselineRetriever({"multispectral": 10, "sar": 2}, embedding_dim=16)
+
+    assert not model.shared_backbone
+    assert set(model.encoders) == {"multispectral", "sar"}
+    assert model.encoders["multispectral"] is not model.encoders["sar"]
+
+
 def test_dual_head_outputs_cross_and_same_embeddings():
     model = EarthBridgeDualHead({"optical_rgb": 3, "sar": 2}, embedding_dim=16)
     model.eval()

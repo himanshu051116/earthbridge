@@ -6,10 +6,20 @@ import torch
 import torch.nn.functional as F
 
 
+def _validate_temperature(temperature: float | torch.Tensor) -> None:
+    value = (
+        float(temperature.detach().cpu())
+        if isinstance(temperature, torch.Tensor)
+        else float(temperature)
+    )
+    if value <= 0:
+        raise ValueError("temperature must be positive")
+
+
 def bidirectional_pair_loss(
     left_embeddings: torch.Tensor,
     right_embeddings: torch.Tensor,
-    temperature: float = 0.07,
+    temperature: float | torch.Tensor = 0.07,
 ) -> torch.Tensor:
     """CLIP-style pair loss for aligned batches.
 
@@ -21,8 +31,7 @@ def bidirectional_pair_loss(
         raise ValueError("left_embeddings and right_embeddings must have identical shapes")
     if left_embeddings.ndim != 2:
         raise ValueError("embeddings must be 2D tensors")
-    if temperature <= 0:
-        raise ValueError("temperature must be positive")
+    _validate_temperature(temperature)
 
     left = F.normalize(left_embeddings, dim=-1)
     right = F.normalize(right_embeddings, dim=-1)

@@ -120,6 +120,7 @@ class RetrievalService:
         self.embedding_dim = int(config.get("embedding_dim", self.embedding_dim))
         backbone = str(config.get("backbone", "small_cnn"))
         projection_dropout = float(config.get("projection_dropout", 0.1))
+        shared_backbone = bool(config.get("shared_backbone", False))
         self.modality_channels = metadata.get("modality_channels") or infer_channels_from_records(
             self.gallery_records or {}
         )
@@ -139,6 +140,7 @@ class RetrievalService:
                 backbone_name=backbone,
                 embedding_dim=self.embedding_dim,
                 projection_dropout=projection_dropout,
+                shared_backbone=shared_backbone,
             )
 
         model.load_state_dict(state_dict)
