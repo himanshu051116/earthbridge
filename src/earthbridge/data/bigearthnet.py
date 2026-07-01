@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -9,19 +10,41 @@ from typing import Any
 from earthbridge.data.inspection import SPLIT_ALIASES, normalize_folder_name
 
 METADATA_EXTENSIONS = {".csv", ".json", ".jsonl", ".parquet"}
-METADATA_NAME_HINTS = {"metadata", "meta", "labels", "label", "patches", "ben"}
+METADATA_NAME_HINTS = {
+    "metadata",
+    "meta",
+    "labels",
+    "label",
+    "patches",
+    "pairs",
+    "pair",
+    "s1_s2",
+    "s2_s1",
+    "ben",
+}
 
 PATCH_ID_COLUMNS = (
     "patch_id",
+    "patchid",
+    "patch",
+    "id",
+    "s2",
+    "s2_id",
     "s2_patch_id",
+    "s2_patchid",
     "s2_name",
+    "s2name",
     "sentinel2_patch_id",
     "sentinel_2_patch_id",
     "name",
 )
 S1_NAME_COLUMNS = (
+    "s1",
+    "s1_id",
     "s1_name",
+    "s1name",
     "s1_patch_id",
+    "s1_patchid",
     "sentinel1_patch_id",
     "sentinel_1_patch_id",
 )
@@ -49,6 +72,54 @@ def normalize_patch_key(value: str | None) -> str:
     if not value:
         return ""
     return Path(str(value).strip()).stem
+
+
+def geographic_patch_key(value: str | None) -> str:
+    """Return a sensor-independent patch key from a BigEarthNet-style filename."""
+    stem = normalize_patch_key(value).upper()
+    if not stem:
+        return ""
+
+    tokens = [token for token in re.split(r"[^A-Z0-9]+", stem) if token]
+    tile_index = next(
+        (index for index, token in enumerate(tokens) if re.fullmatch(r"\d{2}[A-Z]{3}", token)),
+        None,
+    )
+    if tile_index is not None:
+        suffix = tokens[tile_index:]
+        numeric_tail = []
+        for token in reversed(suffix[1:]):
+            if token.isdigit():
+                numeric_tail.append(token)
+            else:
+                break
+        if numeric_tail:
+            return "_".join([suffix[0], *reversed(numeric_tail)])
+        return "_".join(suffix)
+
+    stripped = [
+        token
+        for token in tokens
+        if token
+        not in {
+            "S1",
+            "S1A",
+            "S1B",
+            "S2",
+            "S2A",
+            "S2B",
+            "SENTINEL1",
+            "SENTINEL2",
+            "MSIL1C",
+            "MSIL2A",
+            "IW",
+            "GRDH",
+            "1SDV",
+            "VV",
+            "VH",
+        }
+    ]
+    return "_".join(stripped or tokens)
 
 
 def normalize_column_name(value: str) -> str:

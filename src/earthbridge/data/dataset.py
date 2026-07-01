@@ -11,7 +11,7 @@ from earthbridge.data.manifest import load_manifest
 DEFAULT_CHANNELS = {
     "optical_rgb": 3,
     "sar": 2,
-    "multispectral": 13,
+    "multispectral": 10,
 }
 
 
@@ -77,4 +77,3 @@ def single_item_collate(batch: list[dict[str, object]]) -> dict[str, object]:
         "modality": item["modality"],
         "image": torch.as_tensor(item["image"]).unsqueeze(0),
     }
-

@@ -7,6 +7,7 @@ import _path  # noqa: F401
 
 from earthbridge.data.bigearthnet import (
     BigEarthNetMetadataRecord,
+    geographic_patch_key,
     has_bigearthnet_folders,
     load_bigearthnet_metadata,
     normalize_patch_key,
@@ -45,13 +46,19 @@ def sample_id(prefix: str, value: str) -> str:
 
 def inspections_by_modality_and_key(
     inspections: list[ImageInspection],
+    key_mode: str = "patch",
 ) -> dict[str, dict[str, list[ImageInspection]]]:
     grouped: dict[str, dict[str, list[ImageInspection]]] = {}
     for item in inspections:
         if not item.readable:
             continue
         modality = normalize_modality(item.modality)
-        key = normalize_patch_key(Path(item.path).stem)
+        if key_mode == "geographic":
+            key = geographic_patch_key(Path(item.path).stem)
+        else:
+            key = normalize_patch_key(Path(item.path).stem)
+        if not key:
+            continue
         grouped.setdefault(modality, {}).setdefault(key, []).append(item)
     return grouped
 
@@ -122,6 +129,67 @@ def build_bigearthnet_rows(
     return rows
 
 
+def build_bigearthnet_geographic_rows(
+    root: Path,
+    inspections: list[ImageInspection],
+) -> list[dict[str, str]]:
+    grouped = inspections_by_modality_and_key(inspections, key_mode="geographic")
+    s1_images = grouped.get("sar", {})
+    s2_images = grouped.get("multispectral", {})
+    rows: list[dict[str, str]] = []
+
+    for key in sorted(set(s1_images) & set(s2_images)):
+        known_splits = {
+            image.split
+            for image in [*s1_images[key], *s2_images[key]]
+            if image.split in {"train", "validation", "test"}
+        }
+        candidate_splits = ("train", "validation", "test") if known_splits else ("",)
+        for split in candidate_splits:
+            s1_candidates = [
+                image for image in s1_images[key] if not split or image.split == split
+            ]
+            s2_candidates = [
+                image for image in s2_images[key] if not split or image.split == split
+            ]
+            if not s1_candidates or not s2_candidates:
+                continue
+
+            s1 = s1_candidates[0]
+            s2 = s2_candidates[0]
+            resolved_split = split or s2.split or s1.split
+            pair_id = f"BEN_GEO_{key}"
+            rows.extend(
+                [
+                    {
+                        "sample_id": sample_id("S1", pair_id),
+                        "image_path": image_path_for_manifest(root, s1.path),
+                        "modality": "sar",
+                        "pair_id": pair_id,
+                        "scene_id": key,
+                        "geographic_group": key,
+                        "labels": "",
+                        "channels": str(s1.channels or ""),
+                        "split": resolved_split,
+                    },
+                    {
+                        "sample_id": sample_id("S2", pair_id),
+                        "image_path": image_path_for_manifest(root, s2.path),
+                        "modality": "multispectral",
+                        "pair_id": pair_id,
+                        "scene_id": key,
+                        "geographic_group": key,
+                        "labels": "",
+                        "channels": str(s2.channels or ""),
+                        "split": resolved_split,
+                    },
+                ]
+            )
+            break
+
+    return rows
+
+
 def build_rows(input_root: str | Path) -> list[dict[str, str]]:
     root = Path(input_root)
     inspections = inspect_dataset(root)
@@ -130,6 +198,9 @@ def build_rows(input_root: str | Path) -> list[dict[str, str]]:
         return build_bigearthnet_rows(root, inspections, metadata)
 
     bigearthnet_dataset = has_bigearthnet_folders(root)
+    if bigearthnet_dataset:
+        return build_bigearthnet_geographic_rows(root, inspections)
+
     rows: list[dict[str, str]] = []
 
     counters: dict[str, int] = {}
@@ -142,7 +213,7 @@ def build_rows(input_root: str | Path) -> list[dict[str, str]]:
         stem = Path(item.path).stem
         sample_prefix = modality.upper().replace("_RGB", "").replace("_", "")
         sample_id = f"{sample_prefix}_{counters[modality]:06d}"
-        pair_id = "" if bigearthnet_dataset else stem
+        pair_id = stem
 
         rows.append(
             {

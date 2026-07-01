@@ -7,20 +7,23 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+RASTER_EXTENSIONS = {".tif", ".tiff", ".jp2"}
+PILLOW_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp"}
+
 
 def load_image_chw(path: str | Path) -> np.ndarray:
     image_path = Path(path)
     suffix = image_path.suffix.lower()
 
-    if suffix in {".tif", ".tiff", ".jp2"}:
-        try:
-            import rasterio
+    if suffix in RASTER_EXTENSIONS:
+        import rasterio
 
-            with rasterio.open(image_path) as dataset:
-                array = dataset.read()
-            return np.asarray(array)
-        except Exception:
-            pass
+        with rasterio.open(image_path) as dataset:
+            array = dataset.read()
+        return np.asarray(array)
+
+    if suffix not in PILLOW_EXTENSIONS:
+        raise ValueError(f"Unsupported image extension for {image_path}: {suffix}")
 
     from PIL import Image
 
@@ -45,15 +48,15 @@ def _array_to_chw(array: np.ndarray) -> np.ndarray:
 
 def load_image_chw_from_bytes(filename: str, content: bytes) -> np.ndarray:
     suffix = Path(filename).suffix.lower()
-    if suffix in {".tif", ".tiff", ".jp2"}:
-        try:
-            from rasterio.io import MemoryFile
+    if suffix in RASTER_EXTENSIONS:
+        from rasterio.io import MemoryFile
 
-            with MemoryFile(content) as memory_file:
-                with memory_file.open() as dataset:
-                    return np.asarray(dataset.read())
-        except Exception:
-            pass
+        with MemoryFile(content) as memory_file:
+            with memory_file.open() as dataset:
+                return np.asarray(dataset.read())
+
+    if suffix not in PILLOW_EXTENSIONS:
+        raise ValueError(f"Unsupported image extension for upload {filename}: {suffix}")
 
     from PIL import Image
 
