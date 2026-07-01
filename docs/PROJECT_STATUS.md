@@ -10,6 +10,7 @@
 - Train, descriptor generation, FAISS indexing, evaluation, latency, artifact export, and artifact verification scripts are in place.
 - Manifest validation catches missing files, missing labels, duplicate sample IDs, and zero paired samples before training.
 - Kaggle and Colab notebooks are configured for cloud training and artifact export.
+- `scripts/run_cloud_pipeline.py` runs the full cloud flow from raw data to export zip.
 - FastAPI serves descriptor retrieval, image upload retrieval, model info, health checks, and gallery previews.
 - The browser demo can upload query images and show ranked results with PNG previews.
 - `scripts/create_demo_index.py` creates a local synthetic smoke-demo bundle for API/UI testing.

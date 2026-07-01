@@ -17,6 +17,17 @@ notebooks/kaggle_train_baseline.ipynb
 notebooks/colab_train_baseline.ipynb
 ```
 
+Both notebooks call the same reproducible pipeline script. On Kaggle, the direct command is:
+
+```bash
+python scripts/run_cloud_pipeline.py \
+  --data-raw /kaggle/input/datasets/narendraaironi/bigearthnet-14k/BEN_14k \
+  --left-modality multispectral \
+  --right-modality sar \
+  --device cuda \
+  --export-zip artifacts/earthbridge_export.zip
+```
+
 4. Download:
 
 ```text

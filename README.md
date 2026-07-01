@@ -207,6 +207,16 @@ notebooks/kaggle_train_baseline.ipynb
 notebooks/colab_train_baseline.ipynb
 ```
 
+The notebooks call the same one-command pipeline:
+
+```bash
+python scripts/run_cloud_pipeline.py \
+  --data-raw /kaggle/input/datasets/narendraaironi/bigearthnet-14k/BEN_14k \
+  --left-modality multispectral \
+  --right-modality sar \
+  --device cuda
+```
+
 After downloading `artifacts/earthbridge_export.zip` from Kaggle or Colab, extract it into the project root and verify:
 
 ```bash
