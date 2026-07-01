@@ -58,6 +58,9 @@ LABEL_COLUMNS = (
     "clc_labels",
 )
 SPLIT_COLUMNS = ("split", "fold", "partition", "subset")
+COUNTRY_COLUMNS = ("country",)
+SEASONAL_SNOW_COLUMNS = ("contains_seasonal_snow",)
+CLOUD_OR_SHADOW_COLUMNS = ("contains_cloud_or_shadow",)
 
 
 @dataclass(frozen=True)
@@ -66,6 +69,9 @@ class BigEarthNetMetadataRecord:
     s1_name: str
     labels: tuple[str, ...] = ()
     split: str = ""
+    country: str = ""
+    contains_seasonal_snow: bool = False
+    contains_cloud_or_shadow: bool = False
 
 
 def normalize_patch_key(value: str | None) -> str:
@@ -130,19 +136,48 @@ def normalize_row_keys(row: dict[str, Any]) -> dict[str, Any]:
     return {normalize_column_name(str(key)): value for key, value in row.items()}
 
 
+def is_missing_value(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    if type(value).__name__ in {"NAType", "NaTType"}:
+        return True
+    if isinstance(value, list | tuple | set):
+        return len(value) == 0
+    if hasattr(value, "shape") and hasattr(value, "tolist"):
+        try:
+            if value.shape != ():
+                return len(value) == 0
+            value = value.tolist()
+        except TypeError:
+            pass
+    try:
+        return bool(value != value)
+    except Exception:
+        return False
+
+
 def first_value(row: dict[str, Any], columns: tuple[str, ...]) -> Any:
     for column in columns:
-        if column in row and row[column] not in {None, ""}:
+        if column in row and not is_missing_value(row[column]):
             return row[column]
     return None
 
 
 def parse_labels(value: Any) -> tuple[str, ...]:
-    if value is None:
+    if is_missing_value(value):
         return ()
 
+    if hasattr(value, "tolist") and not isinstance(value, str | bytes):
+        value = value.tolist()
+
     if isinstance(value, list | tuple | set):
-        return tuple(str(item).strip() for item in value if str(item).strip())
+        return tuple(
+            str(item).strip()
+            for item in value
+            if not is_missing_value(item) and str(item).strip()
+        )
 
     text = str(value).strip()
     if not text:
@@ -161,9 +196,25 @@ def parse_labels(value: Any) -> tuple[str, ...]:
 
 
 def normalize_split(value: Any) -> str:
-    if value is None:
+    if is_missing_value(value):
         return ""
     return SPLIT_ALIASES.get(normalize_folder_name(str(value)), "")
+
+
+def parse_text(value: Any) -> str:
+    if is_missing_value(value):
+        return ""
+    return str(value).strip()
+
+
+def parse_bool(value: Any) -> bool:
+    if is_missing_value(value):
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int | float):
+        return bool(value)
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "t"}
 
 
 def metadata_record_from_row(row: dict[str, Any]) -> BigEarthNetMetadataRecord | None:
@@ -175,7 +226,18 @@ def metadata_record_from_row(row: dict[str, Any]) -> BigEarthNetMetadataRecord |
 
     labels = parse_labels(first_value(normalized, LABEL_COLUMNS))
     split = normalize_split(first_value(normalized, SPLIT_COLUMNS))
-    return BigEarthNetMetadataRecord(patch_id=patch_id, s1_name=s1_name, labels=labels, split=split)
+    country = parse_text(first_value(normalized, COUNTRY_COLUMNS))
+    contains_seasonal_snow = parse_bool(first_value(normalized, SEASONAL_SNOW_COLUMNS))
+    contains_cloud_or_shadow = parse_bool(first_value(normalized, CLOUD_OR_SHADOW_COLUMNS))
+    return BigEarthNetMetadataRecord(
+        patch_id=patch_id,
+        s1_name=s1_name,
+        labels=labels,
+        split=split,
+        country=country,
+        contains_seasonal_snow=contains_seasonal_snow,
+        contains_cloud_or_shadow=contains_cloud_or_shadow,
+    )
 
 
 def looks_like_metadata(path: Path) -> bool:
@@ -246,10 +308,7 @@ def load_metadata_file(path: Path) -> list[BigEarthNetMetadataRecord]:
 def load_bigearthnet_metadata(root: str | Path) -> list[BigEarthNetMetadataRecord]:
     records: list[BigEarthNetMetadataRecord] = []
     for path in find_metadata_files(root):
-        try:
-            records.extend(load_metadata_file(path))
-        except Exception:
-            continue
+        records.extend(load_metadata_file(path))
 
     deduped: dict[tuple[str, str], BigEarthNetMetadataRecord] = {}
     for record in records:

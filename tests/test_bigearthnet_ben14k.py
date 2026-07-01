@@ -6,10 +6,15 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import rasterio
 from rasterio.transform import from_origin
 
-from earthbridge.data.bigearthnet import geographic_patch_key, metadata_record_from_row
+from earthbridge.data.bigearthnet import (
+    geographic_patch_key,
+    load_bigearthnet_metadata,
+    metadata_record_from_row,
+)
 from earthbridge.data.inspection import inspect_dataset
 
 
@@ -101,6 +106,116 @@ def test_ben14k_manifest_pairs_s1_s2_from_metadata(tmp_path):
     assert {row["pair_id"] for row in rows} == {"S2_PATCH_A"}
     assert {row["split"] for row in rows} == {"validation"}
     assert {row["labels"] for row in rows} == {"Agriculture|Water"}
+    assert {row["country"] for row in rows} == {""}
+    assert {row["contains_seasonal_snow"] for row in rows} == {"False"}
+    assert {row["contains_cloud_or_shadow"] for row in rows} == {"False"}
+    assert {row["channels"] for row in rows} == {"2", "10"}
+
+
+def test_ben14k_parquet_metadata_loading(monkeypatch, tmp_path):
+    root = tmp_path / "BEN_14k"
+    metadata_path = root / "metadata.parquet"
+    metadata_path.parent.mkdir(parents=True)
+    metadata_path.write_bytes(b"placeholder")
+
+    def fake_read_parquet(path):
+        assert Path(path) == metadata_path
+        frame = pd.DataFrame(
+            {
+                "patch_id": [
+                    "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_26_57",
+                    "",
+                ],
+                "s1_name": [
+                    "S1B_IW_GRDH_1SDV_20170612T165809_33UUP_26_57",
+                    "S1_INVALID",
+                ],
+                "split": ["test", "train"],
+                "country": ["Austria", "France"],
+                "contains_seasonal_snow": [False, True],
+                "contains_cloud_or_shadow": [True, False],
+            }
+        )
+        frame["labels"] = pd.Series(
+            [
+                np.array(
+                    [
+                        "Arable land",
+                        "Broad-leaved forest",
+                        "Mixed forest",
+                        "Pastures",
+                    ],
+                    dtype=object,
+                ),
+                ["Water"],
+            ],
+            dtype=object,
+        )
+        return frame
+
+    monkeypatch.setattr(pd, "read_parquet", fake_read_parquet)
+
+    records = load_bigearthnet_metadata(root)
+
+    assert len(records) == 1
+    assert records[0].patch_id == "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_26_57"
+    assert records[0].s1_name == "S1B_IW_GRDH_1SDV_20170612T165809_33UUP_26_57"
+    assert records[0].labels == (
+        "Arable land",
+        "Broad-leaved forest",
+        "Mixed forest",
+        "Pastures",
+    )
+    assert records[0].split == "test"
+    assert records[0].country == "Austria"
+    assert not records[0].contains_seasonal_snow
+    assert records[0].contains_cloud_or_shadow
+
+
+def test_ben14k_manifest_pairs_s1_s2_from_parquet_metadata(monkeypatch, tmp_path):
+    root = tmp_path / "BEN_14k"
+    s2_name = "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_26_57"
+    s1_name = "S1B_IW_GRDH_1SDV_20170612T165809_33UUP_26_57"
+    write_tiff(root / "test" / "BigEarthNet-S1" / f"{s1_name}.tif", bands=2)
+    write_tiff(root / "test" / "BigEarthNet-S2" / f"{s2_name}.tif", bands=10)
+    write_tiff(root / "test" / "BigEarthNet-S1" / "UNUSED_S1.tif", bands=2)
+    write_tiff(root / "test" / "BigEarthNet-S2" / "UNUSED_S2.tif", bands=10)
+    metadata_path = root / "metadata.parquet"
+    metadata_path.write_bytes(b"placeholder")
+
+    def fake_read_parquet(path):
+        assert Path(path) == metadata_path
+        frame = pd.DataFrame(
+            {
+                "patch_id": [s2_name, "UNAVAILABLE_S2"],
+                "s1_name": [s1_name, "UNAVAILABLE_S1"],
+                "split": ["test", "validation"],
+                "country": ["Austria", "Germany"],
+                "contains_seasonal_snow": [True, False],
+                "contains_cloud_or_shadow": [False, True],
+            }
+        )
+        frame["labels"] = pd.Series(
+            [["Arable land", "Mixed forest"], ["Water"]],
+            dtype=object,
+        )
+        return frame
+
+    monkeypatch.setattr(pd, "read_parquet", fake_read_parquet)
+
+    module = load_build_manifest_module()
+    rows = module.build_rows(root)
+
+    assert len(rows) == 2
+    assert {row["modality"] for row in rows} == {"sar", "multispectral"}
+    assert {row["pair_id"] for row in rows} == {s2_name}
+    assert {row["scene_id"] for row in rows} == {s2_name}
+    assert {row["geographic_group"] for row in rows} == {s2_name}
+    assert {row["labels"] for row in rows} == {"Arable land|Mixed forest"}
+    assert {row["split"] for row in rows} == {"test"}
+    assert {row["country"] for row in rows} == {"Austria"}
+    assert {row["contains_seasonal_snow"] for row in rows} == {"True"}
+    assert {row["contains_cloud_or_shadow"] for row in rows} == {"False"}
     assert {row["channels"] for row in rows} == {"2", "10"}
 
 
