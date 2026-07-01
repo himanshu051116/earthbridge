@@ -50,4 +50,4 @@ Remaining manual action: upload the clean final submission ZIP to the hackathon 
 4. Open `http://127.0.0.1:8000/`.
 5. Upload a Sentinel-2 query and retrieve Sentinel-1 results.
 6. Upload a Sentinel-1 query and retrieve Sentinel-2 results.
-7. Show latency summary and explain that retrieval uses precomputed FAISS descriptors.
+7. Show final submission metrics and explain that retrieval uses precomputed FAISS descriptors.

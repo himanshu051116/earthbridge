@@ -82,5 +82,5 @@ http://127.0.0.1:8000/docs
 - Upload a Sentinel-2 multispectral query and retrieve Sentinel-1 SAR results.
 - Upload a Sentinel-1 SAR query and retrieve Sentinel-2 multispectral results.
 - Show `artifacts/reports/direction_metrics.csv`.
-- Show `artifacts/reports/latency_summary.json`.
+- Show `artifacts/reports/final_submission_metrics.json`.
 - Keep the demo local. Do not rely on Kaggle during judging.

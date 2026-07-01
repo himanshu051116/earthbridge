@@ -9,200 +9,623 @@
         color-scheme: light;
         font-family:
           Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        color: #172026;
-        background: #f4f7f5;
+        color: #1a2421;
+        background: #f5f7f4;
+      }
+
+      * {
+        box-sizing: border-box;
       }
 
       body {
         margin: 0;
+        min-width: 320px;
       }
 
-      header {
-        background: #12312b;
-        color: #f8fbf8;
-        padding: 22px clamp(18px, 4vw, 48px);
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .shell {
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      .topbar {
+        background: #102b26;
+        color: #f7fbf8;
+        border-bottom: 4px solid #62a87c;
+      }
+
+      .topbar-inner {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 22px 0 18px;
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+      }
+
+      .brand {
+        display: grid;
+        gap: 6px;
+      }
+
+      .brand-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #bfe3cf;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .brand-mark svg {
+        width: 18px;
+        height: 18px;
       }
 
       h1 {
-        font-size: 28px;
-        line-height: 1.1;
-        margin: 0 0 6px;
+        margin: 0;
+        font-size: clamp(28px, 4vw, 44px);
+        line-height: 1.02;
         letter-spacing: 0;
       }
 
-      header p {
+      .subtitle {
         margin: 0;
-        color: #c9ddd5;
+        max-width: 760px;
+        color: #d5e7df;
+        font-size: 15px;
+        line-height: 1.45;
+      }
+
+      .system-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(120px, 1fr));
+        gap: 8px;
+        min-width: 360px;
+      }
+
+      .metric {
+        min-height: 72px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .metric span {
+        display: block;
+        color: #bfe3cf;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 5px;
+        font-size: 18px;
+        line-height: 1.2;
       }
 
       main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 22px 0 28px;
         display: grid;
-        grid-template-columns: minmax(280px, 360px) 1fr;
-        gap: 22px;
-        padding: 22px clamp(18px, 4vw, 48px);
+        grid-template-columns: minmax(292px, 360px) minmax(0, 1fr);
+        gap: 18px;
       }
 
-      section {
+      .panel {
         background: #ffffff;
-        border: 1px solid #d8e0dc;
+        border: 1px solid #d8e1dc;
         border-radius: 8px;
-        padding: 18px;
+      }
+
+      .controls {
+        align-self: start;
+        position: sticky;
+        top: 16px;
+      }
+
+      .panel-header {
+        padding: 16px 18px 12px;
+        border-bottom: 1px solid #e4ebe7;
+      }
+
+      .panel-header h2 {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.3;
+      }
+
+      .panel-header p {
+        margin: 6px 0 0;
+        color: #5b6a63;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      form {
+        padding: 16px 18px 18px;
+        display: grid;
+        gap: 14px;
       }
 
       label {
         display: grid;
-        gap: 6px;
-        margin: 0 0 14px;
-        font-size: 14px;
-        font-weight: 650;
+        gap: 7px;
+        color: #2d3d36;
+        font-size: 13px;
+        font-weight: 750;
       }
 
       input,
-      select,
-      button {
-        box-sizing: border-box;
+      select {
         width: 100%;
-        min-height: 40px;
-        border: 1px solid #c7d2cc;
+        min-height: 42px;
+        border: 1px solid #c8d3cd;
         border-radius: 6px;
-        padding: 8px 10px;
-        font: inherit;
+        background: #fbfcfb;
+        color: #17221e;
+        padding: 9px 10px;
       }
 
-      button {
-        background: #176b58;
-        color: white;
-        border-color: #176b58;
+      input[type="file"] {
+        min-height: auto;
+        padding: 9px;
+      }
+
+      .route-grid {
+        display: grid;
+        grid-template-columns: 1fr 40px 1fr;
+        gap: 10px;
+        align-items: end;
+      }
+
+      .swap {
+        width: 40px;
+        min-height: 42px;
+        padding: 0;
+        border: 1px solid #bdd0c6;
+        border-radius: 6px;
+        background: #eff6f1;
+        color: #176b58;
         cursor: pointer;
-        font-weight: 700;
       }
 
-      button:disabled {
+      .swap svg {
+        width: 19px;
+        height: 19px;
+        vertical-align: middle;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .primary {
+        min-height: 44px;
+        border: 1px solid #176b58;
+        border-radius: 6px;
+        background: #176b58;
+        color: #ffffff;
+        cursor: pointer;
+        font-weight: 800;
+        padding: 10px 14px;
+      }
+
+      .primary:disabled {
         cursor: wait;
         opacity: 0.7;
       }
 
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 14px;
-      }
-
-      th,
-      td {
-        padding: 9px 8px;
-        border-bottom: 1px solid #e4ebe7;
-        text-align: left;
-        vertical-align: top;
-      }
-
-      th {
-        color: #41534b;
-        font-size: 12px;
-        text-transform: uppercase;
-      }
-
       .status {
-        min-height: 24px;
-        color: #41534b;
-        font-size: 14px;
+        min-height: 22px;
+        margin: 0;
+        color: #43554d;
+        font-size: 13px;
+        line-height: 1.45;
       }
 
-      .error {
+      .status.error {
         color: #9b1c1c;
       }
 
-      .score {
-        font-variant-numeric: tabular-nums;
+      .results {
+        min-width: 0;
+      }
+
+      .results-top {
+        padding: 16px 18px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        border-bottom: 1px solid #e4ebe7;
+      }
+
+      .results-top h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .route-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: #eef5f1;
+        color: #265247;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .empty {
+        padding: 30px 18px;
+        color: #61726a;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .result-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 12px;
+        padding: 14px;
+      }
+
+      .result-card {
+        display: grid;
+        grid-template-columns: 82px minmax(0, 1fr);
+        gap: 12px;
+        min-height: 116px;
+        padding: 12px;
+        border: 1px solid #dfe8e3;
+        border-radius: 8px;
+        background: #ffffff;
       }
 
       .thumb {
-        width: 64px;
-        height: 64px;
-        object-fit: cover;
+        width: 82px;
+        height: 82px;
         border: 1px solid #d8e0dc;
         border-radius: 6px;
         background: #eef3f0;
+        object-fit: cover;
       }
 
-      @media (max-width: 780px) {
+      .thumb-placeholder {
+        display: grid;
+        place-items: center;
+        color: #789086;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .result-body {
+        min-width: 0;
+        display: grid;
+        align-content: start;
+        gap: 6px;
+      }
+
+      .rank-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .rank {
+        color: #176b58;
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .score {
+        color: #41534b;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .gallery-id {
+        overflow-wrap: anywhere;
+        color: #17221e;
+        font-size: 13px;
+        font-weight: 750;
+        line-height: 1.25;
+        text-decoration: none;
+      }
+
+      .gallery-id:hover {
+        text-decoration: underline;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+
+      .chip {
+        max-width: 100%;
+        min-height: 24px;
+        padding: 4px 7px;
+        border-radius: 999px;
+        background: #f0f5f2;
+        color: #3d5249;
+        font-size: 11px;
+        font-weight: 750;
+        overflow-wrap: anywhere;
+      }
+
+      @media (max-width: 860px) {
+        .topbar-inner,
+        main {
+          width: min(100% - 24px, 1180px);
+        }
+
+        .topbar-inner,
         main {
           grid-template-columns: 1fr;
+        }
+
+        .system-strip {
+          min-width: 0;
+        }
+
+        .controls {
+          position: static;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .system-strip,
+        .route-grid,
+        .actions {
+          grid-template-columns: 1fr;
+        }
+
+        .swap {
+          width: 100%;
+        }
+
+        .result-card {
+          grid-template-columns: 72px minmax(0, 1fr);
+        }
+
+        .thumb {
+          width: 72px;
+          height: 72px;
         }
       }
     </style>
   </head>
   <body>
-    <header>
-      <h1>EarthBridge</h1>
-      <p>Same-modal and cross-modal satellite image retrieval</p>
-    </header>
-    <main>
-      <section>
-        <form id="retrieve-form">
-          <label>
-            Query Image
-            <input id="image" name="image" type="file" required />
-          </label>
-          <label>
-            Query Modality
-            <select id="query_modality" name="query_modality">
-              <option value="multispectral">Sentinel-2 multispectral</option>
-              <option value="sar">Sentinel-1 SAR</option>
-              <option value="optical_rgb">Optical RGB</option>
-            </select>
-          </label>
-          <label>
-            Target Modality
-            <select id="target_modality" name="target_modality">
-              <option value="sar">Sentinel-1 SAR</option>
-              <option value="multispectral">Sentinel-2 multispectral</option>
-              <option value="optical_rgb">Optical RGB</option>
-            </select>
-          </label>
-          <label>
-            Top K
-            <select id="top_k" name="top_k">
-              <option value="5">Top 5</option>
-              <option value="10" selected>Top 10</option>
-            </select>
-          </label>
-          <button id="submit" type="submit">Retrieve</button>
-        </form>
-        <p id="status" class="status"></p>
-      </section>
-      <section>
-        <table>
-          <thead>
-            <tr>
-              <th>Preview</th>
-              <th>Rank</th>
-              <th>Gallery ID</th>
-              <th>Modality</th>
-              <th>Similarity</th>
-              <th>Labels</th>
-            </tr>
-          </thead>
-          <tbody id="results"></tbody>
-        </table>
-      </section>
-    </main>
+    <div class="shell">
+      <header class="topbar">
+        <div class="topbar-inner">
+          <div class="brand">
+            <div class="brand-mark">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3.5 20.5 8v8L12 20.5 3.5 16V8L12 3.5Z" stroke="currentColor" stroke-width="1.8" />
+                <path d="M12 3.5v17M3.5 8l8.5 4.5L20.5 8" stroke="currentColor" stroke-width="1.8" />
+              </svg>
+              Cross-modal retrieval
+            </div>
+            <h1>EarthBridge</h1>
+            <p class="subtitle">
+              Search across Sentinel-1 SAR and Sentinel-2 multispectral observations using a shared Earth representation.
+            </p>
+          </div>
+          <div class="system-strip" aria-label="System status">
+            <div class="metric">
+              <span>Index</span>
+              <strong id="index-status">Checking</strong>
+            </div>
+            <div class="metric">
+              <span>Gallery</span>
+              <strong id="gallery-size">--</strong>
+            </div>
+            <div class="metric">
+              <span>Model</span>
+              <strong id="model-status">Checking</strong>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="panel controls">
+          <div class="panel-header">
+            <h2>Query Setup</h2>
+            <p>Select a sensor route, upload a patch, and retrieve the closest matches.</p>
+          </div>
+          <form id="retrieve-form">
+            <label>
+              Query image
+              <input id="image" name="image" type="file" accept=".tif,.tiff,.png,.jpg,.jpeg,.bmp" required />
+            </label>
+
+            <div class="route-grid">
+              <label>
+                From
+                <select id="query_modality" name="query_modality">
+                  <option value="multispectral">Sentinel-2 multispectral</option>
+                  <option value="sar">Sentinel-1 SAR</option>
+                  <option value="optical_rgb">Optical RGB</option>
+                </select>
+              </label>
+              <button id="swap-route" class="swap" type="button" aria-label="Swap query and target modalities" title="Swap route">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M7 7h11m0 0-4-4m4 4-4 4M17 17H6m0 0 4 4m-4-4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <label>
+                To
+                <select id="target_modality" name="target_modality">
+                  <option value="sar">Sentinel-1 SAR</option>
+                  <option value="multispectral">Sentinel-2 multispectral</option>
+                  <option value="optical_rgb">Optical RGB</option>
+                </select>
+              </label>
+            </div>
+
+            <label>
+              Results
+              <select id="top_k" name="top_k">
+                <option value="5">Top 5</option>
+                <option value="10" selected>Top 10</option>
+              </select>
+            </label>
+
+            <div class="actions">
+              <button id="submit" class="primary" type="submit">Retrieve Matches</button>
+              <p id="status" class="status" role="status">Ready for a query.</p>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel results">
+          <div class="results-top">
+            <h2>Retrieved Matches</h2>
+            <span id="route-pill" class="route-pill">Multispectral -> SAR</span>
+          </div>
+          <div id="empty" class="empty">
+            Results will appear here after a query. Each card shows the ranked gallery item, target modality, similarity score, and land-cover labels when available.
+          </div>
+          <div id="results" class="result-grid" hidden></div>
+        </section>
+      </main>
+    </div>
+
     <script>
       const form = document.querySelector("#retrieve-form");
       const statusEl = document.querySelector("#status");
       const resultsEl = document.querySelector("#results");
+      const emptyEl = document.querySelector("#empty");
       const submit = document.querySelector("#submit");
+      const queryModality = document.querySelector("#query_modality");
+      const targetModality = document.querySelector("#target_modality");
+      const routePill = document.querySelector("#route-pill");
+      const swapRoute = document.querySelector("#swap-route");
+      const indexStatus = document.querySelector("#index-status");
+      const gallerySize = document.querySelector("#gallery-size");
+      const modelStatus = document.querySelector("#model-status");
+
+      const modalityLabels = {
+        multispectral: "Sentinel-2",
+        sar: "Sentinel-1",
+        optical_rgb: "Optical RGB",
+      };
+
+      function labelFor(value) {
+        return modalityLabels[value] || value;
+      }
 
       function setStatus(message, isError = false) {
         statusEl.textContent = message;
         statusEl.className = isError ? "status error" : "status";
       }
 
+      function updateRoute() {
+        routePill.textContent = `${labelFor(queryModality.value)} -> ${labelFor(targetModality.value)}`;
+      }
+
+      function escapeText(value) {
+        return String(value == null ? "" : value).replace(/[&<>"']/g, (character) => {
+          const replacements = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+          return replacements[character];
+        });
+      }
+
+      function renderResult(result) {
+        const card = document.createElement("article");
+        card.className = "result-card";
+
+        const preview = result.thumbnail
+          ? `<img class="thumb" src="${escapeText(result.thumbnail)}" alt="Gallery preview">`
+          : `<div class="thumb thumb-placeholder">No preview</div>`;
+        const title = result.thumbnail
+          ? `<a class="gallery-id" href="${escapeText(result.thumbnail)}" target="_blank" rel="noreferrer">${escapeText(result.gallery_id)}</a>`
+          : `<span class="gallery-id">${escapeText(result.gallery_id)}</span>`;
+        const labels = result.labels
+          ? String(result.labels)
+              .split(";")
+              .map((label) => label.trim())
+              .filter(Boolean)
+              .slice(0, 4)
+          : [];
+
+        card.innerHTML = `
+          ${preview}
+          <div class="result-body">
+            <div class="rank-row">
+              <span class="rank">Rank ${escapeText(result.rank)}</span>
+              <span class="score">${Number(result.similarity).toFixed(4)}</span>
+            </div>
+            ${title}
+            <div class="meta">
+              <span class="chip">${escapeText(labelFor(result.modality || "unknown"))}</span>
+              ${labels.map((label) => `<span class="chip">${escapeText(label)}</span>`).join("")}
+            </div>
+          </div>
+        `;
+        return card;
+      }
+
+      async function loadModelInfo() {
+        try {
+          const response = await fetch("/model-info");
+          const info = await response.json();
+          indexStatus.textContent = info.index_type === "not_loaded" ? "Missing" : "Loaded";
+          gallerySize.textContent = info.index_size ? info.index_size.toLocaleString() : "0";
+          modelStatus.textContent = info.model_loaded ? "Loaded" : "Missing";
+        } catch (_error) {
+          indexStatus.textContent = "Unknown";
+          gallerySize.textContent = "--";
+          modelStatus.textContent = "Unknown";
+        }
+      }
+
+      queryModality.addEventListener("change", updateRoute);
+      targetModality.addEventListener("change", updateRoute);
+
+      swapRoute.addEventListener("click", () => {
+        const currentQuery = queryModality.value;
+        queryModality.value = targetModality.value;
+        targetModality.value = currentQuery;
+        updateRoute();
+      });
+
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         submit.disabled = true;
         resultsEl.innerHTML = "";
-        setStatus("Searching...");
+        resultsEl.hidden = true;
+        emptyEl.hidden = false;
+        setStatus("Searching gallery...");
 
         try {
           const payload = new FormData(form);
@@ -212,24 +635,12 @@
             throw new Error(data.detail || "Retrieval failed");
           }
 
-          setStatus(`${data.retrieval_type} retrieval in ${data.retrieval_time_ms.toFixed(2)} ms`);
+          const count = data.results.length;
+          setStatus(`${data.retrieval_type.replace("_", "-")} retrieval complete: ${count} matches.`);
+          emptyEl.hidden = count > 0;
+          resultsEl.hidden = count === 0;
           for (const result of data.results) {
-            const row = document.createElement("tr");
-            const link = result.thumbnail
-              ? `<a href="${result.thumbnail}" target="_blank" rel="noreferrer">${result.gallery_id}</a>`
-              : result.gallery_id;
-            const preview = result.thumbnail
-              ? `<img class="thumb" src="${result.thumbnail}" alt="">`
-              : "";
-            row.innerHTML = `
-              <td>${preview}</td>
-              <td>${result.rank}</td>
-              <td>${link}</td>
-              <td>${result.modality || ""}</td>
-              <td class="score">${result.similarity.toFixed(4)}</td>
-              <td>${result.labels || ""}</td>
-            `;
-            resultsEl.appendChild(row);
+            resultsEl.appendChild(renderResult(result));
           }
         } catch (error) {
           setStatus(error.message, true);
@@ -237,6 +648,9 @@
           submit.disabled = false;
         }
       });
+
+      updateRoute();
+      loadModelInfo();
     </script>
   </body>
 </html>

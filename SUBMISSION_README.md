@@ -52,7 +52,7 @@ EarthBridge builds a sensor-independent embedding space for Sentinel-1 SAR and S
 3. Each modality is normalized band-wise before encoding.
 4. Modality-specific input adapters feed a compact GroupNorm convolutional encoder and projection head.
 5. Training uses exact-pair contrastive retrieval so matching SAR/Sentinel-2 patches are pulled together.
-6. The final gallery descriptors are precomputed and searched with FAISS for low-latency top-k retrieval.
+6. The final gallery descriptors are precomputed and searched with FAISS for top-k retrieval.
 7. A FastAPI demo serves upload-based retrieval and gallery previews from the exported artifacts.
 
 ## Run Instructions
@@ -89,7 +89,7 @@ Demo flow:
 1. Upload or select a Sentinel-2 multispectral query and retrieve Sentinel-1 SAR matches.
 2. Upload or select a Sentinel-1 SAR query and retrieve Sentinel-2 multispectral matches.
 3. Show `artifacts/reports/final_submission_metrics.json`.
-4. Show the sub-millisecond retrieval latency and explain that FAISS searches precomputed descriptors.
+4. Explain that FAISS searches precomputed descriptors, so the demo does not depend on cloud training.
 
 ## Upload Checklist
 
