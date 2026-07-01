@@ -32,18 +32,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--embedding-dim", type=int, default=256)
     parser.add_argument("--backbone", default="small_cnn")
     parser.add_argument("--batch-size", type=int, default=128)
-    parser.add_argument("--epochs", type=int, default=5)
+    parser.add_argument("--epochs", type=int, default=25)
+    parser.add_argument("--num-workers", type=int, default=8)
+    parser.add_argument("--validation-every", type=int, default=5)
+    parser.add_argument("--validation-pair-limit", type=int, default=512)
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--temperature", type=float, default=0.07)
     parser.add_argument("--projection-dropout", type=float, default=0.0)
     parser.add_argument("--learnable-temperature", action="store_true")
+    parser.add_argument("--mixed-precision", action="store_true")
     parser.add_argument("--semantic-loss-weight", type=float, default=0.0)
     parser.add_argument("--hard-negative-loss-weight", type=float, default=0.0)
     parser.add_argument("--hard-negative-margin", type=float, default=0.2)
     parser.add_argument("--diagnostic-sample-count", type=int, default=128)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--resume-checkpoint", default="")
     parser.add_argument("--top-k", type=int, default=10)
     parser.add_argument("--latency-queries", type=int, default=100)
     parser.add_argument("--relevance-mode", default="semantic")
@@ -197,6 +202,12 @@ def build_steps(args: argparse.Namespace) -> list[PipelineStep]:
                     str(args.batch_size),
                     "--epochs",
                     str(args.epochs),
+                    "--num-workers",
+                    str(args.num_workers),
+                    "--validation-every",
+                    str(args.validation_every),
+                    "--validation-pair-limit",
+                    str(args.validation_pair_limit),
                     "--learning-rate",
                     str(args.learning_rate),
                     "--weight-decay",
@@ -206,6 +217,11 @@ def build_steps(args: argparse.Namespace) -> list[PipelineStep]:
                     *(
                         ["--learnable-temperature"]
                         if args.learnable_temperature
+                        else []
+                    ),
+                    *(
+                        ["--mixed-precision"]
+                        if args.mixed_precision
                         else []
                     ),
                     "--semantic-loss-weight",
@@ -220,6 +236,11 @@ def build_steps(args: argparse.Namespace) -> list[PipelineStep]:
                     str(args.seed),
                     "--device",
                     args.device,
+                    *(
+                        ["--resume-checkpoint", args.resume_checkpoint]
+                        if args.resume_checkpoint
+                        else []
+                    ),
                     "--output-checkpoint",
                     str(checkpoint),
                 ),

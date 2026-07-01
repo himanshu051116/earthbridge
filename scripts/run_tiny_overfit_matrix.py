@@ -27,6 +27,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--backbone", default="small_cnn")
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--num-workers", type=int, default=8)
     parser.add_argument("--learning-rates", type=float, nargs="+", default=[1e-4, 3e-4, 1e-3])
     parser.add_argument("--temperatures", type=float, nargs="+", default=[0.05, 0.07])
     parser.add_argument("--learnable-temperature-start", type=float, default=0.07)
@@ -133,6 +134,9 @@ def main() -> None:
             shared_backbone=False,
             batch_size=args.batch_size,
             epochs=args.epochs,
+            num_workers=args.num_workers,
+            validation_every=1,
+            validation_pair_limit=args.pair_count,
             learning_rate=float(run_config["learning_rate"]),
             weight_decay=args.weight_decay,
             temperature=float(run_config["temperature"]),

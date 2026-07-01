@@ -131,6 +131,7 @@ python scripts/run_tiny_overfit_matrix.py \
   --pair-count 128 \
   --batch-size 128 \
   --epochs 100 \
+  --num-workers 8 \
   --device cuda
 ```
 
@@ -150,11 +151,15 @@ python scripts/train_baseline.py \
   --right-modality sar \
   --validation-manifest data/manifests/validation.csv \
   --batch-size 128 \
-  --epochs 5 \
+  --epochs 25 \
+  --num-workers 8 \
+  --validation-every 5 \
+  --validation-pair-limit 512 \
   --projection-dropout 0 \
   --semantic-loss-weight 0 \
   --hard-negative-loss-weight 0 \
   --diagnostic-sample-count 128 \
+  --mixed-precision \
   --seed 42 \
   --output-checkpoint artifacts/checkpoints/baseline_pair.pt
 ```
@@ -242,10 +247,15 @@ python scripts/run_cloud_pipeline.py \
   --left-modality multispectral \
   --right-modality sar \
   --batch-size 128 \
+  --epochs 25 \
+  --num-workers 8 \
+  --validation-every 5 \
+  --validation-pair-limit 512 \
   --projection-dropout 0 \
   --semantic-loss-weight 0 \
   --hard-negative-loss-weight 0 \
   --diagnostic-sample-count 128 \
+  --mixed-precision \
   --seed 42 \
   --device cuda
 ```

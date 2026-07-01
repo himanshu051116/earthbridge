@@ -88,6 +88,7 @@ def test_train_paired_baseline_writes_checkpoint(tmp_path):
             embedding_dim=8,
             batch_size=2,
             epochs=1,
+            num_workers=0,
             output_checkpoint=str(checkpoint),
         )
     )
@@ -96,6 +97,8 @@ def test_train_paired_baseline_writes_checkpoint(tmp_path):
 
     assert result["pair_count"] == 2
     assert checkpoint.exists()
+    latest_checkpoint = tmp_path / "baseline_latest.pt"
+    assert latest_checkpoint.exists()
     assert "model_state_dict" in payload
     assert payload["metadata"]["pair_count"] == 2
     assert payload["metadata"]["best_validation"]["mean_recall_at_10"] >= 0.0
@@ -109,6 +112,23 @@ def test_train_paired_baseline_writes_checkpoint(tmp_path):
     assert "logit_scale" in diagnostics
     assert diagnostics["augmentations_enabled"] is False
     assert result["pair_alignment"]["same_order"] is True
+
+    resumed_checkpoint = tmp_path / "baseline_resumed.pt"
+    resumed_result = train_paired_baseline(
+        TrainingConfig(
+            manifest_path=str(manifest_path),
+            root_dir=str(tmp_path),
+            image_size=16,
+            embedding_dim=8,
+            batch_size=2,
+            epochs=2,
+            num_workers=0,
+            resume_checkpoint=str(latest_checkpoint),
+            output_checkpoint=str(resumed_checkpoint),
+        )
+    )
+
+    assert resumed_result["history"][-1]["epoch"] == 2.0
 
 
 def test_assert_aligned_pair_ids_rejects_missing_or_misaligned_batch():
@@ -175,11 +195,15 @@ def test_tiny_cross_modal_training_overfits_exact_pairs(tmp_path):
             projection_dropout=0.0,
             batch_size=128,
             epochs=100,
+            num_workers=0,
+            validation_every=1,
             learning_rate=0.001,
             weight_decay=0.0,
             temperature=0.07,
             semantic_loss_weight=0.0,
             hard_negative_loss_weight=0.0,
+            stop_recall_at_1=0.90,
+            stop_recall_at_10=0.99,
             require_validation_pair_alignment=True,
             diagnostic_sample_count=128,
             seed=42,

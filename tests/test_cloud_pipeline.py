@@ -27,12 +27,16 @@ def args(**overrides):
         "backbone": "small_cnn",
         "projection_dropout": 0.0,
         "batch_size": 128,
-        "epochs": 5,
+        "epochs": 25,
+        "num_workers": 8,
+        "validation_every": 5,
+        "validation_pair_limit": 512,
         "learning_rate": 1e-4,
         "weight_decay": 1e-4,
         "temperature": 0.07,
         "device": "cuda",
         "learnable_temperature": False,
+        "mixed_precision": True,
         "semantic_loss_weight": 0.0,
         "hard_negative_loss_weight": 0.0,
         "hard_negative_margin": 0.2,
@@ -44,6 +48,7 @@ def args(**overrides):
         "export_zip": "",
         "allow_missing_labels": False,
         "skip_train": False,
+        "resume_checkpoint": "",
     }
     values.update(overrides)
     return argparse.Namespace(**values)
@@ -83,6 +88,11 @@ def test_build_steps_runs_full_cloud_pipeline_with_label_checks():
     )
     assert any("--projection-dropout 0.0" in command for command in commands)
     assert any("--batch-size 128" in command for command in commands)
+    assert any("--epochs 25" in command for command in commands)
+    assert any("--num-workers 8" in command for command in commands)
+    assert any("--validation-every 5" in command for command in commands)
+    assert any("--validation-pair-limit 512" in command for command in commands)
+    assert any("--mixed-precision" in command for command in commands)
     assert any("--semantic-loss-weight 0.0" in command for command in commands)
     assert any("--hard-negative-loss-weight 0.0" in command for command in commands)
     assert any("--hard-negative-margin 0.2" in command for command in commands)

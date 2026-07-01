@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import time
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -9,7 +10,7 @@ from typing import Any
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 from earthbridge.data.dataset import infer_modality_channels
 from earthbridge.data.manifest import load_manifest
@@ -41,9 +42,13 @@ class TrainingConfig:
     weight_decay: float = 1e-4
     temperature: float = 0.07
     learnable_temperature: bool = False
+    mixed_precision: bool = False
     semantic_loss_weight: float = 0.0
     hard_negative_loss_weight: float = 0.0
     hard_negative_margin: float = 0.2
+    num_workers: int = 8
+    validation_every: int = 5
+    validation_pair_limit: int = 512
     stop_recall_at_1: float = 0.0
     stop_recall_at_10: float = 0.0
     require_validation_pair_alignment: bool = False
@@ -52,6 +57,7 @@ class TrainingConfig:
     seed: int | None = 42
     device: str = "cpu"
     output_checkpoint: str = "artifacts/checkpoints/baseline_pair.pt"
+    resume_checkpoint: str = ""
 
 
 def seed_everything(seed: int | None) -> torch.Generator | None:
@@ -67,6 +73,80 @@ def seed_everything(seed: int | None) -> torch.Generator | None:
     generator = torch.Generator()
     generator.manual_seed(seed)
     return generator
+
+
+class PairedImageDatasetSubset(Dataset):
+    def __init__(self, dataset: PairedImageDataset, indices: list[int]) -> None:
+        self.dataset = dataset
+        self.indices = indices
+        self.left_modality = dataset.left_modality
+        self.right_modality = dataset.right_modality
+        self.pairs = [dataset.pairs[index] for index in indices]
+
+    def __len__(self) -> int:
+        return len(self.indices)
+
+    def __getitem__(self, index: int) -> dict[str, object]:
+        return self.dataset[self.indices[index]]
+
+
+def uses_cuda(device: str) -> bool:
+    return str(device).startswith("cuda")
+
+
+def dataloader_kwargs(config: TrainingConfig) -> dict[str, object]:
+    kwargs: dict[str, object] = {
+        "num_workers": config.num_workers,
+        "pin_memory": uses_cuda(config.device),
+    }
+    if config.num_workers > 0:
+        kwargs["persistent_workers"] = True
+        kwargs["prefetch_factor"] = 4
+    return kwargs
+
+
+def build_data_loader(
+    dataset: Dataset,
+    config: TrainingConfig,
+    shuffle: bool,
+    generator: torch.Generator | None = None,
+) -> DataLoader:
+    return DataLoader(
+        dataset,
+        batch_size=config.batch_size,
+        shuffle=shuffle,
+        collate_fn=paired_collate,
+        generator=generator,
+        **dataloader_kwargs(config),
+    )
+
+
+def deterministic_validation_subset(
+    dataset: PairedImageDataset,
+    limit: int,
+    seed: int | None,
+) -> PairedImageDataset | PairedImageDatasetSubset:
+    if limit <= 0 or len(dataset) <= limit:
+        return dataset
+
+    rng = np.random.default_rng(seed if seed is not None else 0)
+    indices = sorted(rng.choice(len(dataset), size=limit, replace=False).tolist())
+    return PairedImageDatasetSubset(dataset, indices)
+
+
+def latest_checkpoint_path(config: TrainingConfig) -> Path:
+    output_path = Path(config.output_checkpoint)
+    return output_path.with_name(f"{output_path.stem}_latest{output_path.suffix}")
+
+
+def should_run_subset_validation(epoch: int, config: TrainingConfig) -> bool:
+    if config.validation_every <= 0:
+        return False
+    if epoch < config.validation_every and epoch == config.epochs:
+        return True
+    if config.stop_recall_at_1 > 0 or config.stop_recall_at_10 > 0:
+        return epoch % config.validation_every == 0
+    return epoch <= 25 and epoch % config.validation_every == 0
 
 
 def assert_aligned_pair_ids(batch: dict[str, object]) -> None:
@@ -247,15 +327,13 @@ def dataset_image_statistics(
 
 def encode_pair_dataset(
     model: BaselineRetriever,
-    dataset: PairedImageDataset,
-    batch_size: int,
-    device: str,
+    dataset: PairedImageDataset | PairedImageDatasetSubset,
+    config: TrainingConfig,
 ) -> tuple[torch.Tensor, torch.Tensor, list[str]]:
-    loader = DataLoader(
-        dataset,
-        batch_size=batch_size,
+    loader = build_data_loader(
+        dataset=dataset,
+        config=config,
         shuffle=False,
-        collate_fn=paired_collate,
     )
     left_embeddings: list[torch.Tensor] = []
     right_embeddings: list[torch.Tensor] = []
@@ -265,8 +343,14 @@ def encode_pair_dataset(
     with torch.no_grad():
         for batch in loader:
             assert_aligned_pair_ids(batch)
-            left_image = batch["left_image"].to(device)
-            right_image = batch["right_image"].to(device)
+            left_image = batch["left_image"].to(
+                config.device,
+                non_blocking=uses_cuda(config.device),
+            )
+            right_image = batch["right_image"].to(
+                config.device,
+                non_blocking=uses_cuda(config.device),
+            )
             left_embeddings.append(
                 model.encode(left_image, str(batch["left_modality"])).detach().cpu()
             )
@@ -327,15 +411,13 @@ def metrics_from_ranks(ranks: list[int]) -> dict[str, float]:
 
 def exact_pair_retrieval_metrics(
     model: BaselineRetriever,
-    dataset: PairedImageDataset,
-    batch_size: int,
-    device: str,
+    dataset: PairedImageDataset | PairedImageDatasetSubset,
+    config: TrainingConfig,
 ) -> dict[str, Any]:
     left_embeddings, right_embeddings, pair_ids = encode_pair_dataset(
         model,
         dataset,
-        batch_size=batch_size,
-        device=device,
+        config=config,
     )
     left_to_right_ranks = ranks_for_exact_pairs(left_embeddings, right_embeddings)
     right_to_left_ranks = ranks_for_exact_pairs(right_embeddings, left_embeddings)
@@ -430,11 +512,15 @@ def train_paired_baseline(config: TrainingConfig) -> dict[str, object]:
         train_dataset,
         sample_count=config.diagnostic_sample_count,
     )
-    loader = DataLoader(
-        train_dataset,
-        batch_size=config.batch_size,
+    validation_subset = deterministic_validation_subset(
+        validation_dataset,
+        limit=config.validation_pair_limit,
+        seed=config.seed,
+    )
+    loader = build_data_loader(
+        dataset=train_dataset,
+        config=config,
         shuffle=True,
-        collate_fn=paired_collate,
         generator=data_generator,
     )
     model = BaselineRetriever(
@@ -461,6 +547,8 @@ def train_paired_baseline(config: TrainingConfig) -> dict[str, object]:
         lr=config.learning_rate,
         weight_decay=config.weight_decay,
     )
+    amp_enabled = config.mixed_precision and uses_cuda(config.device)
+    scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled)
 
     history: list[dict[str, Any]] = []
     best_epoch = 0
@@ -468,8 +556,29 @@ def train_paired_baseline(config: TrainingConfig) -> dict[str, object]:
     best_recall_at_1 = -1.0
     best_validation: dict[str, Any] | None = None
     checkpoint_path = Path(config.output_checkpoint)
+    latest_path = latest_checkpoint_path(config)
+    start_epoch = 1
+    if config.resume_checkpoint:
+        payload = torch.load(config.resume_checkpoint, map_location=config.device)
+        model.load_state_dict(payload["model_state_dict"])
+        if "optimizer_state_dict" in payload:
+            optimizer.load_state_dict(payload["optimizer_state_dict"])
+        if "grad_scaler_state_dict" in payload:
+            scaler.load_state_dict(payload["grad_scaler_state_dict"])
+        if logit_scale_parameter is not None and "logit_scale" in payload:
+            logit_scale_parameter.data.fill_(float(payload["logit_scale"]))
 
-    for epoch in range(1, config.epochs + 1):
+        metadata = payload.get("metadata", {})
+        history = list(metadata.get("history", []))
+        best_epoch = int(metadata.get("best_epoch", 0))
+        best_recall_at_10 = float(metadata.get("best_mean_recall_at_10", -1.0))
+        best_recall_at_1 = float(metadata.get("best_mean_recall_at_1", -1.0))
+        best_validation = metadata.get("best_validation")
+        start_epoch = int(metadata.get("last_epoch", len(history))) + 1
+
+    training_start = time.perf_counter()
+    for epoch in range(start_epoch, config.epochs + 1):
+        epoch_start = time.perf_counter()
         model.train()
         total_loss = 0.0
         batches = 0
@@ -478,34 +587,45 @@ def train_paired_baseline(config: TrainingConfig) -> dict[str, object]:
 
         for batch in loader:
             assert_aligned_pair_ids(batch)
-            left_image = batch["left_image"].to(config.device)
-            right_image = batch["right_image"].to(config.device)
-
-            left_embeddings = model.encode(left_image, str(batch["left_modality"]))
-            right_embeddings = model.encode(right_image, str(batch["right_modality"]))
-            temperature = current_temperature(config, logit_scale_parameter, config.device)
-            loss = bidirectional_pair_loss(
-                left_embeddings,
-                right_embeddings,
-                temperature=temperature,
+            left_image = batch["left_image"].to(
+                config.device,
+                non_blocking=uses_cuda(config.device),
             )
-            if config.hard_negative_loss_weight > 0:
-                hard_negative_loss = bidirectional_hard_negative_margin_loss(
+            right_image = batch["right_image"].to(
+                config.device,
+                non_blocking=uses_cuda(config.device),
+            )
+
+            with torch.autocast(
+                device_type="cuda" if uses_cuda(config.device) else "cpu",
+                enabled=amp_enabled,
+            ):
+                left_embeddings = model.encode(left_image, str(batch["left_modality"]))
+                right_embeddings = model.encode(right_image, str(batch["right_modality"]))
+                temperature = current_temperature(config, logit_scale_parameter, config.device)
+                loss = bidirectional_pair_loss(
                     left_embeddings,
                     right_embeddings,
-                    margin=config.hard_negative_margin,
-                )
-                loss = loss + config.hard_negative_loss_weight * hard_negative_loss
-            if config.semantic_loss_weight > 0:
-                semantic_loss = multilabel_supervised_contrastive_loss(
-                    torch.cat([left_embeddings, right_embeddings], dim=0),
-                    [*batch["labels"], *batch["labels"]],
                     temperature=temperature,
                 )
-                loss = loss + config.semantic_loss_weight * semantic_loss
+                if config.hard_negative_loss_weight > 0:
+                    hard_negative_loss = bidirectional_hard_negative_margin_loss(
+                        left_embeddings,
+                        right_embeddings,
+                        margin=config.hard_negative_margin,
+                    )
+                    loss = loss + config.hard_negative_loss_weight * hard_negative_loss
+                if config.semantic_loss_weight > 0:
+                    semantic_loss = multilabel_supervised_contrastive_loss(
+                        torch.cat([left_embeddings, right_embeddings], dim=0),
+                        [*batch["labels"], *batch["labels"]],
+                        temperature=temperature,
+                    )
+                    loss = loss + config.semantic_loss_weight * semantic_loss
 
             optimizer.zero_grad(set_to_none=True)
-            loss.backward()
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
             batch_diagnostics = embedding_diagnostics(
                 left_embeddings,
                 right_embeddings,
@@ -525,7 +645,8 @@ def train_paired_baseline(config: TrainingConfig) -> dict[str, object]:
                     "spatial_transform": "deterministic resize only; no augmentation",
                     "augmentations_enabled": False,
                 }
-            optimizer.step()
+            scaler.step(optimizer)
+            scaler.update()
 
             total_loss += float(loss.detach().cpu())
             batches += 1
@@ -535,51 +656,115 @@ def train_paired_baseline(config: TrainingConfig) -> dict[str, object]:
             key: value / max(batches, 1) for key, value in diagnostic_sums.items()
         }
         epoch_diagnostics.update(first_batch_band_stats)
-        validation_metrics = exact_pair_retrieval_metrics(
-            model,
-            validation_dataset,
-            batch_size=config.batch_size,
-            device=config.device,
-        )
+        validation_metrics: dict[str, Any] | None = None
+        full_validation_metrics: dict[str, Any] | None = None
+        if should_run_subset_validation(epoch, config):
+            validation_metrics = exact_pair_retrieval_metrics(
+                model,
+                validation_subset,
+                config=config,
+            )
+        if epoch == 25:
+            if validation_metrics is not None and len(validation_subset) == len(validation_dataset):
+                full_validation_metrics = validation_metrics
+            else:
+                full_validation_metrics = exact_pair_retrieval_metrics(
+                    model,
+                    validation_dataset,
+                    config=config,
+                )
         epoch_record = {
             "epoch": float(epoch),
             "train_pair_loss": average_loss,
             "diagnostics": epoch_diagnostics,
             "validation": validation_metrics,
+            "full_validation": full_validation_metrics,
         }
         history.append(epoch_record)
 
-        recall_at_10 = float(validation_metrics["mean_recall_at_10"])
-        recall_at_1 = float(validation_metrics["mean_recall_at_1"])
-        improved_recall_at_10 = recall_at_10 > best_recall_at_10
-        tied_with_better_recall_at_1 = (
-            recall_at_10 == best_recall_at_10 and recall_at_1 > best_recall_at_1
-        )
+        candidate_validation = full_validation_metrics or validation_metrics
+        if candidate_validation is not None:
+            recall_at_10 = float(candidate_validation["mean_recall_at_10"])
+            recall_at_1 = float(candidate_validation["mean_recall_at_1"])
+            improved_recall_at_10 = recall_at_10 > best_recall_at_10
+            tied_with_better_recall_at_1 = (
+                recall_at_10 == best_recall_at_10 and recall_at_1 > best_recall_at_1
+            )
+        else:
+            improved_recall_at_10 = False
+            tied_with_better_recall_at_1 = False
+
+        metadata = {
+            "config": asdict(config),
+            "history": history,
+            "modality_channels": modality_channels,
+            "pair_count": len(train_dataset),
+            "validation_pair_count": len(validation_dataset),
+            "validation_subset_pair_count": len(validation_subset),
+            "pair_alignment": alignment_summary,
+            "preprocessing_diagnostics": preprocessing_diagnostics,
+            "last_epoch": epoch,
+            "best_epoch": best_epoch,
+            "best_mean_recall_at_10": best_recall_at_10,
+            "best_mean_recall_at_1": best_recall_at_1,
+            "best_validation": best_validation,
+        }
+        extra_state = {
+            "grad_scaler_state_dict": scaler.state_dict(),
+        }
+        if logit_scale_parameter is not None:
+            extra_state["logit_scale"] = float(logit_scale_parameter.detach().cpu())
+
         if improved_recall_at_10 or tied_with_better_recall_at_1:
             best_recall_at_10 = recall_at_10
             best_recall_at_1 = recall_at_1
             best_epoch = epoch
-            best_validation = validation_metrics
+            best_validation = candidate_validation
+            metadata.update(
+                {
+                    "best_epoch": best_epoch,
+                    "best_mean_recall_at_10": best_recall_at_10,
+                    "best_mean_recall_at_1": best_recall_at_1,
+                    "best_validation": best_validation,
+                }
+            )
             save_checkpoint(
                 checkpoint_path,
                 model,
                 optimizer,
-                metadata={
-                    "config": asdict(config),
-                    "history": history,
-                    "modality_channels": modality_channels,
-                    "pair_count": len(train_dataset),
-                    "validation_pair_count": len(validation_dataset),
-                    "pair_alignment": alignment_summary,
-                    "preprocessing_diagnostics": preprocessing_diagnostics,
-                    "best_epoch": best_epoch,
-                    "best_mean_recall_at_10": best_recall_at_10,
-                    "best_mean_recall_at_1": best_recall_at_1,
-                    "best_validation": validation_metrics,
-                },
+                metadata=metadata,
+                extra_state=extra_state,
             )
 
-        if passes_exact_pair_gate(validation_metrics, config):
+        save_checkpoint(
+            latest_path,
+            model,
+            optimizer,
+            metadata=metadata,
+            extra_state=extra_state,
+        )
+
+        epoch_elapsed = time.perf_counter() - epoch_start
+        completed_epochs = epoch - start_epoch + 1
+        average_epoch_time = (time.perf_counter() - training_start) / max(completed_epochs, 1)
+        eta_seconds = average_epoch_time * max(config.epochs - epoch, 0)
+        progress = {
+            "epoch": epoch,
+            "train_pair_loss": average_loss,
+            "epoch_seconds": epoch_elapsed,
+            "eta_seconds": eta_seconds,
+        }
+        if validation_metrics is not None:
+            progress["validation"] = validation_metrics
+        if full_validation_metrics is not None:
+            progress["full_validation"] = full_validation_metrics
+        print(f"TRAIN_PROGRESS {progress}", flush=True)
+
+        gate_passed = (
+            candidate_validation is not None
+            and passes_exact_pair_gate(candidate_validation, config)
+        )
+        if gate_passed:
             break
 
     if best_epoch == 0:

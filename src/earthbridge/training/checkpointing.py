@@ -11,6 +11,7 @@ def save_checkpoint(
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer | None = None,
     metadata: dict[str, Any] | None = None,
+    extra_state: dict[str, Any] | None = None,
 ) -> None:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -21,6 +22,7 @@ def save_checkpoint(
     }
     if optimizer is not None:
         payload["optimizer_state_dict"] = optimizer.state_dict()
+    if extra_state:
+        payload.update(extra_state)
 
     torch.save(payload, output_path)
-

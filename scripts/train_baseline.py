@@ -22,10 +22,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--shared-backbone", action="store_true")
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--epochs", type=int, default=5)
+    parser.add_argument("--num-workers", type=int, default=8)
+    parser.add_argument("--validation-every", type=int, default=5)
+    parser.add_argument("--validation-pair-limit", type=int, default=512)
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--temperature", type=float, default=0.07)
     parser.add_argument("--learnable-temperature", action="store_true")
+    parser.add_argument("--mixed-precision", action="store_true")
     parser.add_argument("--semantic-loss-weight", type=float, default=0.0)
     parser.add_argument("--hard-negative-loss-weight", type=float, default=0.0)
     parser.add_argument("--hard-negative-margin", type=float, default=0.2)
@@ -35,6 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--diagnostic-sample-count", type=int, default=0)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--resume-checkpoint", default="")
     parser.add_argument(
         "--output-checkpoint",
         default="artifacts/checkpoints/baseline_pair.pt",
@@ -57,10 +62,14 @@ def main() -> None:
         shared_backbone=args.shared_backbone,
         batch_size=args.batch_size,
         epochs=args.epochs,
+        num_workers=args.num_workers,
+        validation_every=args.validation_every,
+        validation_pair_limit=args.validation_pair_limit,
         learning_rate=args.learning_rate,
         weight_decay=args.weight_decay,
         temperature=args.temperature,
         learnable_temperature=args.learnable_temperature,
+        mixed_precision=args.mixed_precision,
         semantic_loss_weight=args.semantic_loss_weight,
         hard_negative_loss_weight=args.hard_negative_loss_weight,
         hard_negative_margin=args.hard_negative_margin,
@@ -71,6 +80,7 @@ def main() -> None:
         seed=args.seed,
         device=args.device,
         output_checkpoint=args.output_checkpoint,
+        resume_checkpoint=args.resume_checkpoint,
     )
     result = train_paired_baseline(config)
     print(json.dumps(result, indent=2))
