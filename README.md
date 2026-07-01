@@ -126,9 +126,16 @@ Train the first paired baseline after splits are available:
 python scripts/train_baseline.py \
   --manifest data/manifests/train.csv \
   --root-dir . \
-  --left-modality optical_rgb \
+  --left-modality multispectral \
   --right-modality sar \
+  --validation-manifest data/manifests/validation.csv \
+  --batch-size 128 \
   --epochs 5 \
+  --projection-dropout 0 \
+  --semantic-loss-weight 0.1 \
+  --hard-negative-loss-weight 0.2 \
+  --hard-negative-margin 0.2 \
+  --seed 42 \
   --output-checkpoint artifacts/checkpoints/baseline_pair.pt
 ```
 
@@ -214,6 +221,12 @@ python scripts/run_cloud_pipeline.py \
   --data-raw /kaggle/input/datasets/narendraaironi/bigearthnet-14k/BEN_14k \
   --left-modality multispectral \
   --right-modality sar \
+  --batch-size 128 \
+  --projection-dropout 0 \
+  --semantic-loss-weight 0.1 \
+  --hard-negative-loss-weight 0.2 \
+  --hard-negative-margin 0.2 \
+  --seed 42 \
   --device cuda
 ```
 

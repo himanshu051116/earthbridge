@@ -13,15 +13,15 @@ class SmallConvBackbone(nn.Module):
         super().__init__()
         self.encoder = nn.Sequential(
             nn.Conv2d(input_channels, 32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
+            nn.GroupNorm(8, 32),
             nn.GELU(),
             nn.MaxPool2d(2),
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
+            nn.GroupNorm(8, 64),
             nn.GELU(),
             nn.MaxPool2d(2),
             nn.Conv2d(64, self.feature_dim, kernel_size=3, padding=1),
-            nn.BatchNorm2d(self.feature_dim),
+            nn.GroupNorm(16, self.feature_dim),
             nn.GELU(),
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),
@@ -31,11 +31,15 @@ class SmallConvBackbone(nn.Module):
         return self.encoder(x)
 
 
-def build_backbone(name: str = "small_cnn", pretrained: bool = False) -> tuple[nn.Module, int]:
+def build_backbone(
+    name: str = "small_cnn",
+    pretrained: bool = False,
+    input_channels: int = 3,
+) -> tuple[nn.Module, int]:
     normalized = name.lower().strip()
 
     if normalized == "small_cnn":
-        backbone = SmallConvBackbone()
+        backbone = SmallConvBackbone(input_channels=input_channels)
         return backbone, backbone.feature_dim
 
     if normalized == "resnet18":
@@ -48,4 +52,3 @@ def build_backbone(name: str = "small_cnn", pretrained: bool = False) -> tuple[n
         return model, feature_dim
 
     raise ValueError(f"Unsupported backbone: {name}")
-

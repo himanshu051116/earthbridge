@@ -25,12 +25,17 @@ def args(**overrides):
         "image_size": 128,
         "embedding_dim": 256,
         "backbone": "small_cnn",
-        "batch_size": 16,
+        "projection_dropout": 0.0,
+        "batch_size": 128,
         "epochs": 5,
         "learning_rate": 1e-4,
         "weight_decay": 1e-4,
         "temperature": 0.07,
         "device": "cuda",
+        "semantic_loss_weight": 0.1,
+        "hard_negative_loss_weight": 0.2,
+        "hard_negative_margin": 0.2,
+        "seed": 42,
         "top_k": 10,
         "latency_queries": 100,
         "relevance_mode": "semantic",
@@ -69,6 +74,17 @@ def test_build_steps_runs_full_cloud_pipeline_with_label_checks():
         "--left-modality multispectral --right-modality sar" in command
         for command in commands
     )
+    normalized_commands = [command.replace("\\", "/") for command in commands]
+    assert any(
+        "--validation-manifest data/manifests/validation.csv" in command
+        for command in normalized_commands
+    )
+    assert any("--projection-dropout 0.0" in command for command in commands)
+    assert any("--batch-size 128" in command for command in commands)
+    assert any("--semantic-loss-weight 0.1" in command for command in commands)
+    assert any("--hard-negative-loss-weight 0.2" in command for command in commands)
+    assert any("--hard-negative-margin 0.2" in command for command in commands)
+    assert any("--seed 42" in command for command in commands)
 
 
 def test_build_steps_can_allow_missing_labels_for_debug_subsets():

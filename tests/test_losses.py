@@ -1,6 +1,11 @@
 import torch
 
-from earthbridge.losses import bidirectional_pair_loss, supervised_contrastive_loss
+from earthbridge.losses import (
+    bidirectional_hard_negative_margin_loss,
+    bidirectional_pair_loss,
+    multilabel_supervised_contrastive_loss,
+    supervised_contrastive_loss,
+)
 
 
 def test_bidirectional_pair_loss_is_lower_for_aligned_pairs():
@@ -10,6 +15,17 @@ def test_bidirectional_pair_loss_is_lower_for_aligned_pairs():
 
     aligned_loss = bidirectional_pair_loss(left, right_aligned, temperature=0.1)
     misaligned_loss = bidirectional_pair_loss(left, right_misaligned, temperature=0.1)
+
+    assert aligned_loss < misaligned_loss
+
+
+def test_hard_negative_margin_loss_is_lower_for_separated_pairs():
+    left = torch.eye(4)
+    right_aligned = torch.eye(4)
+    right_misaligned = torch.roll(torch.eye(4), shifts=1, dims=0)
+
+    aligned_loss = bidirectional_hard_negative_margin_loss(right_aligned, left)
+    misaligned_loss = bidirectional_hard_negative_margin_loss(right_misaligned, left)
 
     assert aligned_loss < misaligned_loss
 
@@ -31,3 +47,25 @@ def test_supervised_contrastive_loss_is_finite_with_positive_pairs():
 
     assert torch.isfinite(loss)
 
+
+def test_multilabel_supervised_contrastive_loss_uses_shared_labels():
+    embeddings = torch.randn(4, 8)
+    labels = [
+        ("Arable land", "Pastures"),
+        ("Pastures",),
+        ("Urban fabric",),
+        ("Urban fabric", "Industrial"),
+    ]
+
+    loss = multilabel_supervised_contrastive_loss(embeddings, labels)
+
+    assert torch.isfinite(loss)
+
+
+def test_multilabel_supervised_contrastive_loss_returns_zero_without_shared_labels():
+    embeddings = torch.randn(3, 8)
+    labels = [("A",), ("B",), ()]
+
+    loss = multilabel_supervised_contrastive_loss(embeddings, labels)
+
+    assert loss.item() == 0.0

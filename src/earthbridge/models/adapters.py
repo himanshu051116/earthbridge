@@ -10,8 +10,8 @@ class InputAdapter(nn.Module):
     def __init__(
         self,
         input_channels: int,
-        output_channels: int = 3,
-        hidden_channels: int = 16,
+        output_channels: int = 16,
+        hidden_channels: int = 32,
     ) -> None:
         super().__init__()
         if input_channels <= 0:
@@ -21,7 +21,7 @@ class InputAdapter(nn.Module):
         self.output_channels = output_channels
         self.adapter = nn.Sequential(
             nn.Conv2d(input_channels, hidden_channels, kernel_size=3, padding=1),
-            nn.BatchNorm2d(hidden_channels),
+            nn.GroupNorm(8, hidden_channels),
             nn.GELU(),
             nn.Conv2d(hidden_channels, output_channels, kernel_size=1),
         )
@@ -36,7 +36,13 @@ class InputAdapter(nn.Module):
         return self.adapter(x)
 
 
-def build_adapters(modality_channels: dict[str, int]) -> nn.ModuleDict:
+def build_adapters(
+    modality_channels: dict[str, int],
+    output_channels: int = 16,
+) -> nn.ModuleDict:
     return nn.ModuleDict(
-        {modality: InputAdapter(channels) for modality, channels in modality_channels.items()}
+        {
+            modality: InputAdapter(channels, output_channels=output_channels)
+            for modality, channels in modality_channels.items()
+        }
     )

@@ -91,13 +91,8 @@ def load_preview_png(path: str | Path) -> bytes:
     return output.getvalue()
 
 
-def normalize_image(array: np.ndarray) -> np.ndarray:
-    image = np.asarray(array, dtype=np.float32)
-
-    if np.issubdtype(array.dtype, np.integer):
-        max_value = np.iinfo(array.dtype).max
-        if max_value > 0:
-            return image / max_value
+def normalize_channel(channel: np.ndarray) -> np.ndarray:
+    image = np.asarray(channel, dtype=np.float32)
 
     finite = np.isfinite(image)
     if not finite.any():
@@ -112,6 +107,15 @@ def normalize_image(array: np.ndarray) -> np.ndarray:
     image = (image - low) / (high - low)
     image[~finite] = 0.0
     return image.astype(np.float32)
+
+
+def normalize_image(array: np.ndarray) -> np.ndarray:
+    image = np.asarray(array)
+    if image.ndim != 3:
+        raise ValueError(f"Expected CHW image array, got shape {image.shape}")
+
+    normalized = [normalize_channel(channel) for channel in image]
+    return np.stack(normalized).astype(np.float32)
 
 
 def ensure_channels(tensor: torch.Tensor, expected_channels: int) -> torch.Tensor:

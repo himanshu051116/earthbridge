@@ -20,18 +20,21 @@ def build_model(
     modality_channels: dict[str, int],
     embedding_dim: int,
     backbone: str,
+    projection_dropout: float = 0.1,
 ) -> torch.nn.Module:
     if model_type == "baseline":
         return BaselineRetriever(
             modality_channels=modality_channels,
             backbone_name=backbone,
             embedding_dim=embedding_dim,
+            projection_dropout=projection_dropout,
         )
     if model_type == "dual_head":
         return EarthBridgeDualHead(
             modality_channels=modality_channels,
             backbone_name=backbone,
             embedding_dim=embedding_dim,
+            projection_dropout=projection_dropout,
         )
     raise ValueError(f"Unsupported model_type: {model_type}")
 
@@ -60,6 +63,7 @@ def encode_manifest(
     checkpoint: str | Path | None = None,
     modality_filter: str | None = None,
     device: str = "cpu",
+    projection_dropout: float = 0.1,
 ) -> tuple[list[str], np.ndarray]:
     rows = load_manifest(manifest_path)
     if modality_filter:
@@ -76,7 +80,13 @@ def encode_manifest(
         modality_channels=modality_channels,
         modality_filter=modality_filter,
     )
-    model = build_model(model_type, modality_channels, embedding_dim, backbone)
+    model = build_model(
+        model_type,
+        modality_channels,
+        embedding_dim,
+        backbone,
+        projection_dropout=projection_dropout,
+    )
     load_checkpoint_if_available(model, checkpoint)
     model.to(device)
     model.eval()

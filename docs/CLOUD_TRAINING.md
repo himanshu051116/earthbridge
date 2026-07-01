@@ -24,6 +24,12 @@ python scripts/run_cloud_pipeline.py \
   --data-raw /kaggle/input/datasets/narendraaironi/bigearthnet-14k/BEN_14k \
   --left-modality multispectral \
   --right-modality sar \
+  --batch-size 128 \
+  --projection-dropout 0 \
+  --semantic-loss-weight 0.1 \
+  --hard-negative-loss-weight 0.2 \
+  --hard-negative-margin 0.2 \
+  --seed 42 \
   --device cuda \
   --export-zip artifacts/earthbridge_export.zip
 ```

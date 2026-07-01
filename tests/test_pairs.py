@@ -1,9 +1,10 @@
 import csv
 
 import numpy as np
+import pytest
 from PIL import Image
 
-from earthbridge.data.pairs import PairedImageDataset, find_paired_rows
+from earthbridge.data.pairs import PairedImageDataset, find_paired_rows, paired_collate
 
 
 def test_find_paired_rows_matches_requested_modalities():
@@ -30,7 +31,7 @@ def test_paired_image_dataset_loads_pair(tmp_path):
     with manifest_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(
             handle,
-            fieldnames=["sample_id", "image_path", "modality", "pair_id", "channels"],
+            fieldnames=["sample_id", "image_path", "modality", "pair_id", "labels", "channels"],
         )
         writer.writeheader()
         writer.writerow(
@@ -39,6 +40,7 @@ def test_paired_image_dataset_loads_pair(tmp_path):
                 "image_path": "images/opt.png",
                 "modality": "optical_rgb",
                 "pair_id": "P1",
+                "labels": "Forest|Water",
                 "channels": "3",
             }
         )
@@ -48,6 +50,7 @@ def test_paired_image_dataset_loads_pair(tmp_path):
                 "image_path": "images/sar.png",
                 "modality": "sar",
                 "pair_id": "P1",
+                "labels": "Water|Urban",
                 "channels": "1",
             }
         )
@@ -64,6 +67,27 @@ def test_paired_image_dataset_loads_pair(tmp_path):
     assert len(dataset) == 1
     assert item["left_id"] == "O1"
     assert item["right_id"] == "S1"
+    assert item["pair_id"] == "P1"
+    assert item["left_pair_id"] == "P1"
+    assert item["right_pair_id"] == "P1"
+    assert item["labels"] == ("Forest", "Urban", "Water")
     assert item["left_image"].shape == (3, 16, 16)
     assert item["right_image"].shape == (1, 16, 16)
 
+
+def test_paired_collate_rejects_misaligned_pair_ids():
+    batch = [
+        {
+            "left_id": "O1",
+            "right_id": "S1",
+            "left_pair_id": "P1",
+            "right_pair_id": "P2",
+            "left_modality": "optical_rgb",
+            "right_modality": "sar",
+            "left_image": np.zeros((3, 8, 8), dtype=np.float32),
+            "right_image": np.zeros((1, 8, 8), dtype=np.float32),
+        }
+    ]
+
+    with pytest.raises(ValueError, match="misaligned"):
+        paired_collate(batch)

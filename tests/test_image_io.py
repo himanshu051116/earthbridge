@@ -8,6 +8,7 @@ from earthbridge.data.image_io import (
     load_image_tensor,
     load_image_tensor_from_bytes,
     load_preview_png,
+    normalize_image,
 )
 
 
@@ -54,6 +55,20 @@ def test_load_image_tensor_reads_ten_band_sentinel2_tiff(tmp_path):
 
     assert tensor.shape == (10, 16, 16)
     assert tensor.dtype == torch.float32
+
+
+def test_normalize_image_uses_band_wise_percentiles():
+    low_range = np.array([[0, 1], [2, 3]], dtype=np.float32)
+    high_range = np.array([[1000, 2000], [3000, 4000]], dtype=np.float32)
+    image = np.stack([low_range, high_range])
+
+    normalized = normalize_image(image)
+
+    assert normalized.shape == (2, 2, 2)
+    assert np.isclose(normalized[0].min(), 0.0)
+    assert np.isclose(normalized[0].max(), 1.0)
+    assert np.isclose(normalized[1].min(), 0.0)
+    assert np.isclose(normalized[1].max(), 1.0)
 
 
 def test_ensure_channels_pads_missing_channels():

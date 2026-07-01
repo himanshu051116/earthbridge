@@ -21,6 +21,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--backbone", default="small_cnn")
     parser.add_argument("--embedding-dim", type=int, default=256)
     parser.add_argument("--image-size", type=int, default=224)
+    parser.add_argument("--projection-dropout", type=float, default=0.1)
     parser.add_argument("--modality", default="")
     parser.add_argument("--device", default="cpu")
     return parser.parse_args()
@@ -39,6 +40,7 @@ def main() -> None:
         checkpoint=args.checkpoint or None,
         modality_filter=args.modality or None,
         device=args.device,
+        projection_dropout=args.projection_dropout,
     )
 
     output_dir = Path(args.output_dir)
@@ -50,4 +52,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

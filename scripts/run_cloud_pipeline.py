@@ -31,12 +31,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--image-size", type=int, default=128)
     parser.add_argument("--embedding-dim", type=int, default=256)
     parser.add_argument("--backbone", default="small_cnn")
-    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--temperature", type=float, default=0.07)
+    parser.add_argument("--projection-dropout", type=float, default=0.0)
+    parser.add_argument("--semantic-loss-weight", type=float, default=0.1)
+    parser.add_argument("--hard-negative-loss-weight", type=float, default=0.2)
+    parser.add_argument("--hard-negative-margin", type=float, default=0.2)
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--top-k", type=int, default=10)
     parser.add_argument("--latency-queries", type=int, default=100)
     parser.add_argument("--relevance-mode", default="semantic")
@@ -176,12 +181,16 @@ def build_steps(args: argparse.Namespace) -> list[PipelineStep]:
                     args.left_modality,
                     "--right-modality",
                     args.right_modality,
+                    "--validation-manifest",
+                    str(manifest_dir / "validation.csv"),
                     "--image-size",
                     str(args.image_size),
                     "--embedding-dim",
                     str(args.embedding_dim),
                     "--backbone",
                     args.backbone,
+                    "--projection-dropout",
+                    str(args.projection_dropout),
                     "--batch-size",
                     str(args.batch_size),
                     "--epochs",
@@ -192,6 +201,14 @@ def build_steps(args: argparse.Namespace) -> list[PipelineStep]:
                     str(args.weight_decay),
                     "--temperature",
                     str(args.temperature),
+                    "--semantic-loss-weight",
+                    str(args.semantic_loss_weight),
+                    "--hard-negative-loss-weight",
+                    str(args.hard_negative_loss_weight),
+                    "--hard-negative-margin",
+                    str(args.hard_negative_margin),
+                    "--seed",
+                    str(args.seed),
                     "--device",
                     args.device,
                     "--output-checkpoint",
@@ -222,6 +239,8 @@ def build_steps(args: argparse.Namespace) -> list[PipelineStep]:
                     str(args.embedding_dim),
                     "--backbone",
                     args.backbone,
+                    "--projection-dropout",
+                    str(args.projection_dropout),
                     "--device",
                     args.device,
                 ),

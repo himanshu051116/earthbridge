@@ -14,14 +14,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root-dir", default=".")
     parser.add_argument("--left-modality", default="optical_rgb")
     parser.add_argument("--right-modality", default="sar")
+    parser.add_argument("--validation-manifest", default="")
     parser.add_argument("--image-size", type=int, default=224)
     parser.add_argument("--embedding-dim", type=int, default=256)
     parser.add_argument("--backbone", default="small_cnn")
+    parser.add_argument("--projection-dropout", type=float, default=0.0)
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--temperature", type=float, default=0.07)
+    parser.add_argument("--semantic-loss-weight", type=float, default=0.1)
+    parser.add_argument("--hard-negative-loss-weight", type=float, default=0.2)
+    parser.add_argument("--hard-negative-margin", type=float, default=0.2)
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", default="cpu")
     parser.add_argument(
         "--output-checkpoint",
@@ -37,14 +43,20 @@ def main() -> None:
         root_dir=args.root_dir,
         left_modality=args.left_modality,
         right_modality=args.right_modality,
+        validation_manifest_path=args.validation_manifest,
         image_size=args.image_size,
         embedding_dim=args.embedding_dim,
         backbone=args.backbone,
+        projection_dropout=args.projection_dropout,
         batch_size=args.batch_size,
         epochs=args.epochs,
         learning_rate=args.learning_rate,
         weight_decay=args.weight_decay,
         temperature=args.temperature,
+        semantic_loss_weight=args.semantic_loss_weight,
+        hard_negative_loss_weight=args.hard_negative_loss_weight,
+        hard_negative_margin=args.hard_negative_margin,
+        seed=args.seed,
         device=args.device,
         output_checkpoint=args.output_checkpoint,
     )
@@ -54,4 +66,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
